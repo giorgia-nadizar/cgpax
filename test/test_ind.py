@@ -1,15 +1,14 @@
 import copy
 
-from cgpax import get_config
-import pytest
 import numpy as np
 
 from cgpax.individual import Individual
+from cgpax.functions import plus, minus, times, prot_div
 
 # cfg = get_config("cfg/test.yaml")
 cfg = {
     "n_nodes": 10,
-    "functions": [lambda x, y: x + y, lambda x, y: x * y, lambda x, y: x - y, lambda x, y: 0 if y == 0 else x / y],
+    "functions": [plus, minus, times, prot_div],
     "constrained": False,
     "p_mut_inputs": 0.2,
     "p_mut_functions": 0.2,
