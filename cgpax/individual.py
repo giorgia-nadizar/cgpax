@@ -5,6 +5,7 @@ from typing import List
 import numpy as np
 
 
+# TODO add a comment to remind that the first n_in positions in the buffer are for the inputs (and genes are shifted)
 class Individual:
     n_in: int
     n_out: int
@@ -15,6 +16,7 @@ class Individual:
     f_genes: np.ndarray
     out_genes: np.ndarray
     buffer: np.ndarray
+    active: np.ndarray
     # TODO optimize the storage of this
     __inputs_mask__: np.ndarray
 
@@ -30,6 +32,8 @@ class Individual:
         self.out_genes = out_genes
         self.buffer = buffer
         self.__inputs_mask__ = inputs_mask
+        self.active = np.zeros(len(buffer), dtype=bool)
+        self.compute_active()
         super().__init__()
 
     @classmethod
@@ -47,19 +51,29 @@ class Individual:
         out_genes = np.floor(np.random.rand(n_out) * (n_in + n_nodes)).astype(int)
         return cls(n_in, n_out, n_nodes, cfg["functions"], x_genes, y_genes, f_genes, out_genes, buffer, inputs_mask)
 
+    def compute_active(self):
+        self.active[:self.n_in] = True
+        for i in self.out_genes:
+            self.__compute_active__(i)
+
+    def __compute_active__(self, idx):
+        if not self.active[idx]:
+            self.active[idx] = True
+            self.__compute_active__(self.x_genes[idx - self.n_in])
+            self.__compute_active__(self.y_genes[idx - self.n_in])
+
     def reset(self) -> None:
         self.buffer[:] = 0
 
     def process(self, inputs: np.ndarray) -> np.ndarray:
         self.buffer[0:self.n_in] = inputs
-        # TODO create boolean array to check active nodes and avoid useless computation here
-        # then it will be just an if in here
         for buffer_idx in range(self.n_in, len(self.buffer)):
-            idx = buffer_idx - self.n_in
-            func = self.functions[self.f_genes[idx]]
-            x = self.buffer[self.x_genes[idx]]
-            y = self.buffer[self.y_genes[idx]]
-            self.buffer[buffer_idx] = func(x, y)
+            if self.active[buffer_idx]:
+                idx = buffer_idx - self.n_in
+                func = self.functions[self.f_genes[idx]]
+                x = self.buffer[self.x_genes[idx]]
+                y = self.buffer[self.y_genes[idx]]
+                self.buffer[buffer_idx] = func(x, y)
         return self.buffer[self.out_genes]
 
     def mutate_from_conf(self, cfg) -> Individual:
@@ -71,12 +85,12 @@ class Individual:
         for i in range(len(self.x_genes)):
             p_x, p_y, p_f = tuple(np.random.rand(3))
             if p_x < p_mut_inputs:
-                self.x_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
+                new_ind.x_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
             if p_y < p_mut_inputs:
-                self.y_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
+                new_ind.y_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
             if p_f < p_mut_functions:
-                self.f_genes[i] = np.random.randint(low=0, high=len(self.functions))
+                new_ind.f_genes[i] = np.random.randint(low=0, high=len(self.functions))
         for i in range(len(self.out_genes)):
             if np.random.rand() < p_mut_outputs:
-                self.out_genes[i] = np.random.randint(low=0, high=len(self.buffer))
+                new_ind.out_genes[i] = np.random.randint(low=0, high=len(self.buffer))
         return new_ind

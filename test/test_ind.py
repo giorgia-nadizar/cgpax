@@ -1,3 +1,5 @@
+import copy
+
 from cgpax import get_config
 import pytest
 import numpy as np
@@ -38,6 +40,7 @@ def test_call_ind():
     inputs = np.random.rand(n_in)
     outputs = ind.process(inputs)
     assert len(outputs) == n_out
+    assert np.all(ind.buffer[np.invert(ind.active)] == 0)
     if cfg['constrained']:
         assert np.max(outputs) <= 1.0
         assert np.min(outputs) >= -1.0
@@ -54,9 +57,14 @@ def test_mutation():
     n_in = 3
     n_out = 4
     original_ind = Individual.from_config(cfg, n_in, n_out)
+    copied_original_ind = copy.deepcopy(original_ind)
     mutated_ind = original_ind.mutate_from_conf(cfg)
     assert len(original_ind.buffer) == len(mutated_ind.buffer)
     assert mutated_ind is not original_ind
+    assert np.all(original_ind.x_genes == copied_original_ind.x_genes)
+    assert np.all(original_ind.y_genes == copied_original_ind.y_genes)
+    assert np.all(original_ind.f_genes == copied_original_ind.f_genes)
+    assert np.all(original_ind.out_genes == copied_original_ind.out_genes)
     inputs = np.random.rand(n_in)
     outputs = mutated_ind.process(inputs)
     assert len(outputs) == mutated_ind.n_out
