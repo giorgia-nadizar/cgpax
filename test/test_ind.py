@@ -57,6 +57,9 @@ def test_mutation():
     mutated_ind = original_ind.mutate_from_conf(cfg)
     assert len(original_ind.buffer) == len(mutated_ind.buffer)
     assert mutated_ind is not original_ind
+    inputs = np.random.rand(n_in)
+    outputs = mutated_ind.process(inputs)
+    assert len(outputs) == mutated_ind.n_out
     # 1 0 0 mut prob
     mutated_ind = original_ind.mutate(1, 0, 0)
     assert np.any(original_ind.x_genes != mutated_ind.x_genes)
