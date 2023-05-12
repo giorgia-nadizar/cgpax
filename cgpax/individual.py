@@ -76,21 +76,48 @@ class Individual:
                 self.buffer[buffer_idx] = func(x, y)
         return self.buffer[self.out_genes]
 
-    def mutate_from_conf(self, cfg) -> Individual:
-        return self.mutate(cfg["p_mut_inputs"], cfg["p_mut_functions"], cfg["p_mut_outputs"])
+    def get_process_program(self, function_name: str = "process") -> str:
+        text_function = f"""from jax import jit
+@jit
+def {function_name}(inputs, buffer):
+  def copy_inputs(idx, carry):
+    inputs, buffer = carry
+    buffer = buffer.at[idx].set(inputs.at[idx].get())
+    return inputs, buffer
+  _, buffer = fori_loop(0, len(inputs), copy_inputs, (inputs, buffer))
+"""
+        function_names = [x.__name__ for x in self.functions]
+        for buffer_idx in range(self.n_in, len(self.buffer)):
+            if self.active[buffer_idx]:
+                idx = buffer_idx - self.n_in
+                text_function += f"  buffer = buffer.at[{buffer_idx}].set({function_names[self.f_genes[idx]]}(" \
+                                 f"buffer.at[{self.x_genes[idx]}].get(), buffer.at[{self.y_genes[idx]}].get()))\n"
 
-    def mutate(self, p_mut_inputs: float, p_mut_functions: float, p_mut_outputs: float) -> Individual:
-        new_ind = copy.deepcopy(self)
-        new_ind.reset()
-        for i in range(len(self.x_genes)):
-            p_x, p_y, p_f = tuple(np.random.rand(3))
-            if p_x < p_mut_inputs:
-                new_ind.x_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
-            if p_y < p_mut_inputs:
-                new_ind.y_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
-            if p_f < p_mut_functions:
-                new_ind.f_genes[i] = np.random.randint(low=0, high=len(self.functions))
-        for i in range(len(self.out_genes)):
-            if np.random.rand() < p_mut_outputs:
-                new_ind.out_genes[i] = np.random.randint(low=0, high=len(self.buffer))
-        return new_ind
+        text_function += f"  outputs = jax.numpy.zeros({self.n_out})\n"
+        for outputs_idx, buffer_idx in enumerate(self.out_genes):
+            text_function += f"  outputs = outputs.at[{outputs_idx}].set(buffer.at[{buffer_idx}].get())\n"
+
+        text_function += "  return buffer, outputs"
+        return text_function
+
+
+def mutate_from_config(self, cfg) -> Individual:
+    return self.mutate(cfg["p_mut_inputs"], cfg["p_mut_functions"], cfg["p_mut_outputs"])
+
+
+def mutate(self, p_mut_inputs: float, p_mut_functions: float, p_mut_outputs: float) -> Individual:
+    new_ind = copy.deepcopy(self)
+    new_ind.reset()
+    for i in range(len(self.x_genes)):
+        p_x, p_y, p_f = tuple(np.random.rand(3))
+        if p_x < p_mut_inputs:
+            new_ind.x_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
+        if p_y < p_mut_inputs:
+            new_ind.y_genes[i] = np.random.randint(low=0, high=self.__inputs_mask__[i])
+        if p_f < p_mut_functions:
+            new_ind.f_genes[i] = np.random.randint(low=0, high=len(self.functions))
+    for i in range(len(self.out_genes)):
+        if np.random.rand() < p_mut_outputs:
+            new_ind.out_genes[i] = np.random.randint(low=0, high=len(self.buffer))
+    new_ind.compute_active()
+    return new_ind

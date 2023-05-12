@@ -1,5 +1,6 @@
 import copy
 
+import jax
 import numpy as np
 
 from cgpax.individual import Individual
@@ -52,12 +53,25 @@ def test_call_ind():
         assert np.all(outputs == 0)
 
 
+def test_jit():
+    n_in = 3
+    n_out = 2
+    individual = Individual.from_config(cfg, n_in, n_out)
+    txt = individual.get_process_program("my_process")
+    exec(txt)
+    buffer = jax.numpy.zeros(10)
+    inputs = jax.numpy.ones(3)
+    new_buffer, outputs = my_process(inputs, buffer)
+    std_process_outputs = individual.process(inputs)
+    assert np.all(outputs == std_process_outputs)
+
+
 def test_mutation():
     n_in = 3
     n_out = 4
     original_ind = Individual.from_config(cfg, n_in, n_out)
     copied_original_ind = copy.deepcopy(original_ind)
-    mutated_ind = original_ind.mutate_from_conf(cfg)
+    mutated_ind = original_ind.mutate_from_config(cfg)
     assert len(original_ind.buffer) == len(mutated_ind.buffer)
     assert mutated_ind is not original_ind
     assert np.all(original_ind.x_genes == copied_original_ind.x_genes)
