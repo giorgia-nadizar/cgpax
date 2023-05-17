@@ -33,14 +33,14 @@ class Individual:
         self.buffer = buffer
         self.__inputs_mask__ = inputs_mask
         self.active = np.zeros(len(buffer), dtype=bool)
-        self.compute_active()
+        # self.compute_active()
         super().__init__()
 
     @classmethod
     def from_config(cls, cfg: dict, n_in: int, n_out: int):
         n_nodes = cfg["n_nodes"]
         buffer = np.zeros(n_in + n_nodes)
-        # TODO this implementation is non recursive
+        # TODO this implementation is non-recursive
         inputs_mask = np.arange(n_in, n_in + n_nodes)
         float_x_genes = np.random.rand(n_nodes)
         float_y_genes = np.random.rand(n_nodes)
@@ -50,6 +50,12 @@ class Individual:
         f_genes = np.floor(len(cfg["functions"]) * float_f_genes).astype(int)
         out_genes = np.floor(np.random.rand(n_out) * (n_in + n_nodes)).astype(int)
         return cls(n_in, n_out, n_nodes, cfg["functions"], x_genes, y_genes, f_genes, out_genes, buffer, inputs_mask)
+
+    def get_full_genome(self):
+        return np.concatenate((self.x_genes, self.y_genes, self.f_genes, self.out_genes))
+
+    def get_genome_and_active_mask(self):
+        return np.concatenate((self.x_genes, self.y_genes, self.f_genes, self.out_genes, self.active))
 
     def compute_active(self):
         self.active[:self.n_in] = True
@@ -76,24 +82,32 @@ class Individual:
                 self.buffer[buffer_idx] = func(x, y)
         return self.buffer[self.out_genes]
 
+    def exec_process_program(self, dictionary=None, function_name: str = "process") -> dict:
+        if dictionary is None:
+            dictionary = {}
+        string_jit_process = self.get_process_program(function_name)
+        exec(string_jit_process, dictionary)
+        return dictionary
+
     def get_process_program(self, function_name: str = "process") -> str:
-        text_function = f"""from jax import jit
-global {function_name}
-@jax.jit
-def {function_name}(inputs, buffer):
-  def copy_inputs(idx, carry):
-    inputs, buffer = carry
-    buffer = buffer.at[idx].set(inputs.at[idx].get())
-    return inputs, buffer
-  _, buffer = jax.lax.fori_loop(0, len(inputs), copy_inputs, (inputs, buffer))
-"""
+        # TODO optimize imports -> have a fixed entry in the dict to execute at the beginning of evolution?
+        # imports and copy of inputs
         function_names = [x.__name__ for x in self.functions]
+        text_function = f"import jax\n" \
+                        f"from cgpax.functions import copy_inputs\n" \
+                        f"from cgpax.functions import {', '.join(set(function_names))}\n" \
+                        f"@jax.jit\n" \
+                        f"def {function_name}(inputs, buffer):\n" \
+                        f"  _, buffer = jax.lax.fori_loop(0, len(inputs), copy_inputs, (inputs, buffer))\n"
+
+        # execution
         for buffer_idx in range(self.n_in, len(self.buffer)):
             if self.active[buffer_idx]:
                 idx = buffer_idx - self.n_in
                 text_function += f"  buffer = buffer.at[{buffer_idx}].set({function_names[self.f_genes[idx]]}(" \
                                  f"buffer.at[{self.x_genes[idx]}].get(), buffer.at[{self.y_genes[idx]}].get()))\n"
 
+        # output selection
         text_function += f"  outputs = jax.numpy.zeros({self.n_out})\n"
         for outputs_idx, buffer_idx in enumerate(self.out_genes):
             text_function += f"  outputs = outputs.at[{outputs_idx}].set(buffer.at[{buffer_idx}].get())\n"

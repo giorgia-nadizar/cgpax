@@ -5,6 +5,13 @@ from jax.lax import cond
 
 
 @jit
+def copy_inputs(idx, carry):
+    inputs, buffer = carry
+    buffer = buffer.at[idx].set(inputs.at[idx].get())
+    return inputs, buffer
+
+
+@jit
 def plus(x, y):
     return jnp.add(x, y)
 

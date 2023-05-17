@@ -18,8 +18,7 @@ cfg = {
 
 
 def test_create_ind():
-    n_in = 3
-    n_out = 4
+    n_in, n_out = 3, 4
     ind = Individual.from_config(cfg, n_in, n_out)
     assert ind.n_in == n_in
     assert ind.n_out == n_out
@@ -34,8 +33,7 @@ def test_create_ind():
 
 
 def test_call_ind():
-    n_in = 1
-    n_out = 2
+    n_in, n_out = 1, 2
     ind = Individual.from_config(cfg, n_in, n_out)
     inputs = np.random.rand(n_in)
     outputs = ind.process(inputs)
@@ -54,21 +52,19 @@ def test_call_ind():
 
 
 def test_jit():
-    n_in = 3
-    n_out = 2
+    n_in, n_out = 3, 2
     individual = Individual.from_config(cfg, n_in, n_out)
-    txt = individual.get_process_program("my_process")
-    exec(txt)
+    func_name = "func_name"
+    res_dict = individual.exec_process_program(function_name=func_name)
     buffer = jax.numpy.zeros(len(individual.buffer))
     inputs = jax.numpy.ones(n_in)
-    new_buffer, outputs = my_process(inputs, buffer)
+    new_buffer, outputs = res_dict[func_name](inputs, buffer)
     std_process_outputs = individual.process(inputs)
     assert np.all(outputs == std_process_outputs)
 
 
 def test_mutation():
-    n_in = 3
-    n_out = 4
+    n_in, n_out = 3, 4
     original_ind = Individual.from_config(cfg, n_in, n_out)
     copied_original_ind = copy.deepcopy(original_ind)
     mutated_ind = original_ind.mutate_from_config(cfg)
