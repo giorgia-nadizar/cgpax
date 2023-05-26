@@ -1,8 +1,19 @@
+from functools import partial
+
 from cgpax.jax_encoding import genome_to_program
 
-from jax import lax, jit
+from jax import lax, jit, vmap
 from jax import random
 from jax import numpy as jnp
+
+
+def evaluate_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
+                            n_times: int) -> jnp.ndarray:
+    rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
+    subkeys_array = jnp.array(subkeys)
+    partial_evaluate_genome = partial(evaluate_genome, config=config, env=env)
+    vmap_evaluate_genome = vmap(partial_evaluate_genome, in_axes=(None, 0))
+    return vmap_evaluate_genome(genome, subkeys_array)
 
 
 def evaluate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env) -> float:
@@ -26,3 +37,22 @@ def evaluate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, 
     )
 
     return carry[-1]
+
+
+def evaluate_genome_regression(genome: jnp.ndarray, config: dict, observations: jnp.ndarray,
+                               targets: jnp.ndarray) -> float:
+    def predict_row(observation: jnp.ndarray, genome: jnp.ndarray, config: dict) -> jnp.ndarray:
+        program = genome_to_program(genome, config)
+        _, y_tilde = program(observation, jnp.zeros(config["buffer_size"]))
+        return y_tilde
+
+    partial_predict = partial(predict_row, genome=genome, config=config)
+    vmap_predict = vmap(partial_predict)
+    predicted_targets = vmap_predict(observations)
+    predicted_targets = jnp.reshape(predicted_targets, targets.shape)
+    print(predicted_targets)
+    print(targets)
+    delta_squared = jnp.square(targets - predicted_targets)
+    total_delta = jnp.sum(delta_squared)
+    mse = total_delta / targets.size
+    return jnp.sqrt(mse)

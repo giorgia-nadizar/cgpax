@@ -17,17 +17,21 @@ from cgpax.jax_evaluation import evaluate_genome
 from cgpax.jax_selection import fp_selection
 
 config = {
+    "seed": 1,
+
     "problem": {"environment": "halfcheetah", "maximize": True, "episode_length": 1000},
     "backend": "positional",
-    "n_nodes": 100,
+    "n_generations": 100,
     "n_individuals": 500,
     "elite_size": 50,
-    "functions": ["plus", "minus", "times", "prot_div"],
     "p_mut_inputs": 0.2,
     "p_mut_functions": 0.2,
     "p_mut_outputs": 0.2,
+
+    "n_nodes": 100,
+    "functions": ["plus", "minus", "times", "prot_div"],
+
     "constrain_outputs": True,
-    "seed": 1
 }
 
 if __name__ == "__main__":
@@ -41,6 +45,7 @@ if __name__ == "__main__":
     config["n_in"] = env.observation_size
     config["n_out"] = env.action_size
     config["buffer_size"] = config["n_in"] + config["n_nodes"]
+    config["genome_size"] = 3 * config["n_nodes"] + config["n_out"]
     n_mutations = int(config["n_individuals"] / config["elite_size"])
 
     genome_mask = compute_genome_mask(config, config["n_in"], config["n_out"])

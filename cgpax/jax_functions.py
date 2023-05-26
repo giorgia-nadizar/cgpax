@@ -20,7 +20,7 @@ def minus(x, y):
 
 @jit
 def times(x, y):
-    return jnp.multiply(x, -y)
+    return jnp.multiply(x, y)
 
 
 @jit

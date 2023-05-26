@@ -48,8 +48,7 @@ def genome_to_program(genome: jnp.ndarray, config: dict):
 
     def program(inputs: jnp.ndarray, buffer: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
         _, buffer = fori_loop(0, n_in, __copy_inputs__, (inputs, buffer))
-        _, _, _, buffer = fori_loop(n_in, len(buffer), __update_buffer__,
-                                    (x_genes, y_genes, f_genes, buffer))
+        _, _, _, buffer = fori_loop(n_in, len(buffer), __update_buffer__, (x_genes, y_genes, f_genes, buffer))
         # _, _, outputs = fori_loop(0, n_out, __copy_outputs__, (out_genes, buffer, jnp.zeros(n_out)))
         outputs = jnp.take(buffer, out_genes)
         # TODO add the flag for non-bounded outputs
