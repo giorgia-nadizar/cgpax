@@ -4,6 +4,13 @@ import jax.numpy as jnp
 from jax import random, vmap
 
 
+def composed_selection(genomes: jnp.ndarray, fitness_values: jnp.ndarray, rnd_key: random.PRNGKey,
+                       indexes: jnp.ndarray, selection_function):
+    sub_genomes = jnp.take(genomes, indexes, axis=0)
+    sub_fitness_values = jnp.take(fitness_values, indexes, axis=0)
+    return selection_function(sub_genomes, sub_fitness_values, rnd_key)
+
+
 def truncation_selection(genomes: jnp.ndarray, fitness_values: jnp.ndarray, rnd_key: random.PRNGKey,
                          n_elites: int) -> jnp.ndarray:
     elites, _ = jnp.split(jnp.argsort(-fitness_values), [n_elites])
@@ -33,23 +40,3 @@ def tournament_selection(genomes: jnp.ndarray, fitness_values: jnp.ndarray, rnd_
                                         tour_size=tour_size)
     vmap_tournament = vmap(partial_single_tournament)
     return vmap_tournament(sample_key=sample_keys)
-
-
-def island_selection(genomes: jnp.ndarray, fitness_values: jnp.ndarray, rnd_key: random.PRNGKey,
-                     n_elites: int) -> jnp.ndarray:
-    # parents first, then the offspring from each parent
-    def select_from_ith_island(idx: int, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
-                               n_elites: int) -> jnp.ndarray:
-        n_offspring = (len(genomes) - n_elites) / n_elites
-        offspring_indexes = jnp.arange(start=0, stop=n_offspring) + n_elites + idx * n_offspring
-        indexes = jnp.concatenate([jnp.array([idx]), offspring_indexes]).astype(int)
-        ith_fitness = jnp.take(fitness_values, indexes)
-        ith_genomes = jnp.take(genomes, indexes, axis=0)
-        best_genome = ith_genomes.at[jnp.argmax(ith_fitness)].get()
-        return best_genome
-
-    partial_ith_select = partial(select_from_ith_island, genomes=genomes, fitness_values=fitness_values,
-                                 n_elites=n_elites)
-    vmap_ith_select = vmap(partial_ith_select)
-    island_ids = jnp.arange(start=0, stop=n_elites)
-    return vmap_ith_select(island_ids)
