@@ -8,15 +8,16 @@ from jax import numpy as jnp
 
 
 def evaluate_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
-                            n_times: int) -> jnp.ndarray:
+                            n_times: int, episode_length: int = 1000) -> jnp.ndarray:
     rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
     subkeys_array = jnp.array(subkeys)
-    partial_evaluate_genome = partial(evaluate_genome, config=config, env=env)
+    partial_evaluate_genome = partial(evaluate_genome, config=config, env=env, episode_length=episode_length)
     vmap_evaluate_genome = vmap(partial_evaluate_genome, in_axes=(None, 0))
     return vmap_evaluate_genome(genome, subkeys_array)
 
 
-def evaluate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env) -> float:
+def evaluate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
+                    episode_length: int = 1000) -> float:
     program = genome_to_program(genome, config)
     state = jit(env.reset)(rnd_key)
 
@@ -33,7 +34,7 @@ def evaluate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, 
         f=rollout_loop,
         init=(state, jnp.zeros(config["buffer_size"]), state.reward),
         xs=None,
-        length=config["problem"]["episode_length"],
+        length=episode_length,
     )
 
     return carry[-1]
