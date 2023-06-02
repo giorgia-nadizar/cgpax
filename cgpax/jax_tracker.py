@@ -9,9 +9,11 @@ from pathlib import Path
 
 # NOTE: once initialized, the object should not be modified in compiled functions
 class Tracker:
-    def __init__(self, config: dict, top_k: int = 3) -> None:
+    def __init__(self, config: dict, top_k: int = 3, idx: int = 0, saving_interval: int = 100) -> None:
         self.config: dict = config
         self.top_k: int = top_k
+        self.idx: int = idx
+        self.saving_interval: int = saving_interval
 
     @partial(jit, static_argnums=(0,))
     def init(self) -> chex.ArrayTree:
@@ -79,16 +81,21 @@ class Tracker:
             tracker_state["backup"]["best_individual"].at[i].set(best_individual)
         )
 
-        # NOTE - Update current generation counter
+        # NOTE: Update current generation counter
         tracker_state["generation"] += 1
         return tracker_state
 
     def wandb_log(self, tracker_state, wdb_run) -> None:
         gen = tracker_state["generation"] - 1
+        # NOTE: Store best genome occasionally
+        if tracker_state["generation"] % self.saving_interval == 0:
+            prefix = f"{self.idx}_{gen}"
+            self.wandb_save_genome(tracker_state["backup"]["best_individual"][gen], wdb_run, prefix)
 
         wdb_run.log(
             {
                 "training": {
+                    "run_id": self.idx,
                     "generation": gen,
                     f"top_k_fit": {
                         f"top_{t}_fit": float(tracker_state["training"]["top_k_fit"][gen][t]) for t in range(self.top_k)
@@ -98,12 +105,16 @@ class Tracker:
                     "fitness_median": float(tracker_state["training"]["fitness_median"][gen]),
                     "fitness_1q": float(tracker_state["training"]["fitness_1q"][gen]),
                     "fitness_3q": float(tracker_state["training"]["fitness_3q"][gen]),
+                    "evaluation_time": float(tracker_state["training"]["evaluation_time"][gen])
                 },
             }
         )
 
-    def wandb_save_genome(self, genome, wdb_run) -> None:
-        save_path = Path(wdb_run.dir) / "genomes" / f"{str(int(time()))}_best_individual.npy"
+    @staticmethod
+    def wandb_save_genome(genome, wdb_run, prefix=None) -> None:
+        if prefix is None:
+            prefix = str(int(time()))
+        save_path = Path(wdb_run.dir) / "genomes" / f"{prefix}_best_genome.npy"
         save_path.parent.mkdir(parents=True, exist_ok=True)
         with open(save_path, "wb") as temp_f:
             jnp.save(temp_f, genome)
