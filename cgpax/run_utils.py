@@ -5,7 +5,7 @@ from brax.envs.wrapper import EpisodeWrapper
 from jax import vmap, jit
 import jax.numpy as jnp
 
-from cgpax.jax_evaluation import evaluate_genome, evaluate_genome_n_times
+from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times
 from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked
 from cgpax.jax_selection import truncation_selection, tournament_selection, fp_selection
 
@@ -58,9 +58,9 @@ def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, 
 
 def __compile_genome_evaluation__(config: dict, env, episode_length: int):
     if config["n_evals_per_individual"] == 1:
-        partial_eval_genome = partial(evaluate_genome, config=config, env=env, episode_length=episode_length)
+        partial_eval_genome = partial(evaluate_cgp_genome, config=config, env=env, episode_length=episode_length)
     else:
-        partial_eval_genome = partial(evaluate_genome_n_times, config=config, env=env,
+        partial_eval_genome = partial(evaluate_cgp_genome_n_times, config=config, env=env,
                                       n_times=config["n_evals_per_individual"], episode_length=episode_length)
     vmap_evaluate_genome = vmap(partial_eval_genome, in_axes=(0, 0))
     return jit(vmap_evaluate_genome)
