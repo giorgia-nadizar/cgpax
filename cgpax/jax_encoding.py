@@ -83,3 +83,5 @@ def genome_to_lgp_program(genome: jnp.ndarray, config: dict):
         bounded_outputs = jnp.tanh(outputs)
 
         return register, bounded_outputs
+
+    return jit(program)
