@@ -29,10 +29,10 @@ def __init_environments__(config: dict):
             "start_gen": gen_step_size * n,
             "env": EpisodeWrapper(
                 envs.get_environment(env_name=config["problem"]["environment"], backend=config["backend"]),
-                episode_length=(min_duration + step_size * n), action_repeat=1
+                episode_length=(min_duration + int(step_size * n)), action_repeat=1
             ),
-            "fitness_scaler": config["problem"]["episode_length"] / (min_duration + step_size * n),
-            "duration": (min_duration + step_size * n)
+            "fitness_scaler": config["problem"]["episode_length"] / (min_duration + int(step_size * n)),
+            "duration": (min_duration + int(step_size * n))
         }
         for n in range(n_steps)
     ]
