@@ -1,3 +1,4 @@
+
 from __future__ import annotations
 
 from jax import jit
@@ -74,6 +75,18 @@ class JaxFunction:
         "sin": sin,
         "lower": lower,
         "greater": greater
+    }
+
+    arities = {
+        "plus": 2,
+        "minus": 2,
+        "times": 2,
+        "prot_div": 2,
+        "abs": 1,
+        "exp": 1,
+        "sin": 1,
+        "lower": 2,
+        "greater": 2
     }
 
     def __init__(self, op) -> None:

@@ -38,7 +38,7 @@ def genome_to_program(genome: jnp.ndarray, config: dict):
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
 
-    x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
+    x_genes, y_genes, f_genes, out_genes = jnp.split(genome, [n_nodes, 2 * n_nodes, 3 * n_nodes])
 
     def program(inputs: jnp.ndarray, buffer: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
         _, buffer = fori_loop(0, n_in, __copy_inputs__, (inputs, buffer))
