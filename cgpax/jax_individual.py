@@ -6,14 +6,22 @@ from jax import random
 from jax.lax import fori_loop
 
 
-def compute_mutation_prob_mask(config: dict, n_out: int) -> jnp.ndarray:
+def compute_cgp_mutation_prob_mask(config: dict, n_out: int) -> jnp.ndarray:
     in_mut_mask = config["p_mut_inputs"] * jnp.ones(config["n_nodes"])
     f_mut_mask = config["p_mut_functions"] * jnp.ones(config["n_nodes"])
     out_mut_mask = config["p_mut_outputs"] * jnp.ones(n_out)
     return jnp.concatenate((in_mut_mask, in_mut_mask, f_mut_mask, out_mut_mask))
 
 
-def compute_genome_mask(config: dict, n_in: int, n_out: int) -> jnp.ndarray:
+def compute_lgp_mutation_prob_mask(config: dict) -> jnp.ndarray:
+    n_rows = config["n_rows"]
+    lhs_mask = config["p_mut_lhs"] * jnp.ones(n_rows)
+    rhs_mask = config["p_mut_rhs"] * jnp.ones(n_rows)
+    f_mask = config["p_mut_functions"] * jnp.ones(n_rows)
+    return jnp.concatenate((lhs_mask, rhs_mask, rhs_mask, f_mask))
+
+
+def compute_cgp_genome_mask(config: dict, n_in: int, n_out: int) -> jnp.ndarray:
     n_nodes = config["n_nodes"]
     if config["recursive"]:
         in_mask = (n_in + n_nodes) * jnp.ones(n_nodes)
@@ -22,6 +30,15 @@ def compute_genome_mask(config: dict, n_in: int, n_out: int) -> jnp.ndarray:
     f_mask = config["n_functions"] * jnp.ones(n_nodes)
     out_mask = (n_in + n_nodes) * jnp.ones(n_out)
     return jnp.concatenate((in_mask, in_mask, f_mask, out_mask))
+
+
+def compute_lgp_genome_mask(config: dict, n_in: int) -> jnp.ndarray:
+    n_rows = config["n_rows"]
+    n_registers = config["n_registers"]
+    lhs_mask = (n_registers - n_in) * jnp.ones(n_rows)
+    rhs_mask = n_registers * jnp.ones(n_rows)
+    f_mask = config["n_functions"] * jnp.ones(n_rows)
+    return jnp.concatenate((lhs_mask, rhs_mask, rhs_mask, f_mask))
 
 
 def generate_genome(genome_mask: jnp.ndarray, rnd_key: random.PRNGKey) -> jnp.ndarray:

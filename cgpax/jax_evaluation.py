@@ -1,24 +1,24 @@
 from functools import partial
 
-from cgpax.jax_encoding import genome_to_program
+from cgpax.jax_encoding import genome_to_cgp_program
 
 from jax import lax, jit, vmap
 from jax import random
 from jax import numpy as jnp
 
 
-def evaluate_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
-                            n_times: int, episode_length: int = 1000) -> jnp.ndarray:
+def evaluate_cgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
+                                n_times: int, episode_length: int = 1000) -> jnp.ndarray:
     rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
     subkeys_array = jnp.array(subkeys)
-    partial_evaluate_genome = partial(evaluate_genome, config=config, env=env, episode_length=episode_length)
+    partial_evaluate_genome = partial(evaluate_cgp_genome, config=config, env=env, episode_length=episode_length)
     vmap_evaluate_genome = vmap(partial_evaluate_genome, in_axes=(None, 0))
     return vmap_evaluate_genome(genome, subkeys_array)
 
 
-def evaluate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
-                    episode_length: int = 1000) -> float:
-    program = genome_to_program(genome, config)
+def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
+                        episode_length: int = 1000) -> float:
+    program = genome_to_cgp_program(genome, config)
     state = jit(env.reset)(rnd_key)
 
     def rollout_loop(carry, x):
@@ -40,10 +40,10 @@ def evaluate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, 
     return carry[-1]
 
 
-def evaluate_genome_regression(genome: jnp.ndarray, config: dict, observations: jnp.ndarray,
-                               targets: jnp.ndarray) -> float:
+def evaluate_cgp_genome_regression(genome: jnp.ndarray, config: dict, observations: jnp.ndarray,
+                                   targets: jnp.ndarray) -> float:
     def predict_row(observation: jnp.ndarray, genome: jnp.ndarray, config: dict) -> jnp.ndarray:
-        program = genome_to_program(genome, config)
+        program = genome_to_cgp_program(genome, config)
         _, y_tilde = program(observation, jnp.zeros(config["buffer_size"]))
         return y_tilde
 
