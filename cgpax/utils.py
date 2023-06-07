@@ -59,7 +59,7 @@ def readable_lgp_program_from_genome(genome: jnp.ndarray, config: dict):
     # execution
     for row_idx in range(config["n_rows"]):
         function_name = function_names[f_genes[row_idx]]
-        text_function += f"  r[{lhs_genes[row_idx]}] = {function_name}(r[{x_genes[row_idx]}]"
+        text_function += f"  r[{lhs_genes[row_idx] + config['n_in']}] = {function_name}(r[{x_genes[row_idx]}]"
         if JaxFunction.arities[function_name] > 1:
             text_function += f", r[{y_genes[row_idx]}]"
         text_function += ")\n"
