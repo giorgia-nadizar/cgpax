@@ -5,8 +5,10 @@ from brax.envs.wrapper import EpisodeWrapper
 from jax import vmap, jit
 import jax.numpy as jnp
 
-from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times
-from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked
+from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
+    evaluate_lgp_genome_n_times
+from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
+    compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask
 from cgpax.jax_selection import truncation_selection, tournament_selection, fp_selection
 
 
@@ -41,8 +43,12 @@ def __init_environments__(config: dict):
 def __update_config_with_env_data__(config: dict, env):
     config["n_in"] = env.observation_size
     config["n_out"] = env.action_size
-    config["buffer_size"] = config["n_in"] + config["n_nodes"]
-    config["genome_size"] = 3 * config["n_nodes"] + config["n_out"]
+    if config["solver"] == "cgp":
+        config["buffer_size"] = config["n_in"] + config["n_nodes"]
+        config["genome_size"] = 3 * config["n_nodes"] + config["n_out"]
+    else:
+        config["n_registers"] = config["n_in"] + config["n_extra_registers"] + config["n_out"]
+        config["genome_size"] = 4 * config["n_rows"]
 
 
 def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, n_elites: int = 1) -> jnp.ndarray:
@@ -57,10 +63,14 @@ def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, 
 
 
 def __compile_genome_evaluation__(config: dict, env, episode_length: int):
-    if config["n_evals_per_individual"] == 1:
-        partial_eval_genome = partial(evaluate_cgp_genome, config=config, env=env, episode_length=episode_length)
+    if config["solver"] == "cgp":
+        eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
     else:
-        partial_eval_genome = partial(evaluate_cgp_genome_n_times, config=config, env=env,
+        eval_func, eval_n_times_func = evaluate_lgp_genome, evaluate_lgp_genome_n_times
+    if config["n_evals_per_individual"] == 1:
+        partial_eval_genome = partial(eval_func, config=config, env=env, episode_length=episode_length)
+    else:
+        partial_eval_genome = partial(eval_n_times_func, config=config, env=env,
                                       n_times=config["n_evals_per_individual"], episode_length=episode_length)
     vmap_evaluate_genome = vmap(partial_eval_genome, in_axes=(0, 0))
     return jit(vmap_evaluate_genome)
@@ -88,3 +98,13 @@ def __compile_selection__(config: dict):
     else:
         partial_selection = partial(fp_selection, n_elites=config["selection"]["elite_size"])
     return jit(partial_selection)
+
+
+def __compute_masks__(config: dict):
+    if config["solver"] == "cgp":
+        genome_mask = compute_cgp_genome_mask(config, config["n_in"], config["n_out"])
+        mutation_mask = compute_cgp_mutation_prob_mask(config, config["n_out"])
+    else:
+        genome_mask = compute_lgp_genome_mask(config, config["n_in"])
+        mutation_mask = compute_lgp_mutation_prob_mask(config)
+    return genome_mask, mutation_mask

@@ -88,7 +88,7 @@ def graph_from_genome(genome: jnp.ndarray, config: dict):
             idx = buffer_idx - n_in
             current_node = node_ids[buffer_idx]
             graph.add_edge(node_ids[x_genes[idx]], current_node)
-            function_name = current_node.split("_")[0]
+            function_name = "prot_div" if current_node.startswith("prot_div") else current_node.split("_")[0]
             if JaxFunction.arities[function_name] > 1:
                 graph.add_edge(node_ids[y_genes[idx]], current_node)
 
