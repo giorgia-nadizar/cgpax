@@ -1,0 +1,27 @@
+backend: positional
+constrain_outputs: true
+mutation: standard
+n_evals_per_individual: 5
+n_extra_registers: 5
+n_functions: 9
+n_generations: 5000
+n_individuals: 10
+n_parallel_runs: 10
+n_rows: 25
+nan_replacement: -100000.0
+p_mut_functions: 0.1
+p_mut_lhs: 0.3
+p_mut_rhs: 0.1
+problem:
+  environment: halfcheetah
+  episode_length: 1000
+  incremental_steps: 6
+  maximize: true
+  min_length: 200
+recursive: false
+seed: 0
+selection:
+  elite_size: 1
+  type: truncation
+solver: lgp
+survival: parents
