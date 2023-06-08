@@ -1,6 +1,6 @@
 import jax.numpy as jnp
-from brax import envs
-from brax.envs.wrapper import EpisodeWrapper
+from brax.v1 import envs
+from brax.v1.envs.wrappers import EpisodeWrapper
 
 from jax import random
 from brax.io import html
@@ -76,9 +76,9 @@ def __save_html_visualization__(genome: jnp.ndarray, config: dict, file_prefix: 
 
 
 analysis_config = {
-    "run": "run-20230607_213638-kcc4izum",
+    "run": "run-20230608_150618-7e9255ta",
     "seed": 0,
-    "generation": 4099,
+    "generation": 399,
     "target_dir": "outcomes",
     "program_file": True,
     "graph_file": True,
@@ -95,7 +95,7 @@ if __name__ == '__main__':
     genome = jnp.load(f"{base_path}/genomes/{analysis_config['seed']}_{analysis_config['generation']}_best_genome.npy",
                       allow_pickle=True).astype(int)
 
-    env = envs.get_environment(env_name=environment, backend=config["backend"])
+    env = envs.get_environment(env_name=environment)
     env = EpisodeWrapper(env, episode_length=config["problem"]["episode_length"], action_repeat=1)
     __update_config_with_env_data__(config, env)
 
