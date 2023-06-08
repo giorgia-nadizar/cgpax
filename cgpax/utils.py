@@ -65,11 +65,11 @@ def readable_lgp_program_from_genome(genome: jnp.ndarray, config: dict):
         text_function += ")\n"
 
     # output selection
-    text_function += f"  outputs = r[:{config['n_out']}]\n"
+    text_function += f"  outputs = r[-{config['n_out']}:]\n"
     return text_function
 
 
-def graph_from_genome(genome: jnp.ndarray, config: dict):
+def graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue", y_color: str = "orange"):
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
@@ -87,9 +87,9 @@ def graph_from_genome(genome: jnp.ndarray, config: dict):
         if active[buffer_idx]:
             idx = buffer_idx - n_in
             current_node = node_ids[buffer_idx]
-            graph.add_edge(node_ids[x_genes[idx]], current_node)
+            graph.add_edge(node_ids[x_genes[idx]], current_node, color=x_color)
             function_name = "prot_div" if current_node.startswith("prot_div") else current_node.split("_")[0]
             if JaxFunction.arities[function_name] > 1:
-                graph.add_edge(node_ids[y_genes[idx]], current_node)
+                graph.add_edge(node_ids[y_genes[idx]], current_node, color=y_color)
 
     return graph

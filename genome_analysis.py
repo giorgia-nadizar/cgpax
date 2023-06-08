@@ -76,9 +76,9 @@ def __save_html_visualization__(genome: jnp.ndarray, config: dict, file_prefix: 
 
 
 analysis_config = {
-    "run": "run-20230607_123445-du7c2cr2",
+    "run": "run-20230607_213638-kcc4izum",
     "seed": 0,
-    "generation": 1299,
+    "generation": 4099,
     "target_dir": "outcomes",
     "program_file": True,
     "graph_file": True,
