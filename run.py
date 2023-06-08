@@ -126,6 +126,9 @@ if __name__ == '__main__':
 
     config_file = "configs/cgp.yaml"
     config = cgpax.get_config(config_file)
-    wdb_run = wandb.init(config=config, project="cgpax")
-    run_merge(config, wdb_run)
-    wdb_run.finish()
+    envs = ["hopper", "halfcheetah", "ant"]
+    for env in envs:
+        config["problem"]["environment"] = env
+        wdb_run = wandb.init(config=config, project="cgpax")
+        run_merge(config, wdb_run)
+        wdb_run.finish()

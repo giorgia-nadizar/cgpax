@@ -1,21 +1,22 @@
 from functools import partial
 
-from brax import envs
-from brax.envs.wrapper import EpisodeWrapper
-from jax import vmap, jit
+from brax.v1 import envs
+from brax.v1.envs.wrappers import EpisodeWrapper
+from jax import vmap, jit, random
 import jax.numpy as jnp
 
 from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times
 from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
     compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask
-from cgpax.jax_selection import truncation_selection, tournament_selection, fp_selection
+from cgpax.jax_selection import truncation_selection, tournament_selection, fp_selection, composed_selection
+from cgpax.jax_tracker import Tracker
 
 
 # TODO move within individual files?
 
 def __init_environment__(config: dict):
-    env = envs.get_environment(env_name=config["problem"]["environment"], backend=config["backend"])
+    env = envs.get_environment(env_name=config["problem"]["environment"])
     return EpisodeWrapper(
         env, episode_length=config["problem"]["episode_length"], action_repeat=1
     )
@@ -30,7 +31,7 @@ def __init_environments__(config: dict):
         {
             "start_gen": gen_step_size * n,
             "env": EpisodeWrapper(
-                envs.get_environment(env_name=config["problem"]["environment"], backend=config["backend"]),
+                envs.get_environment(env_name=config["problem"]["environment"]),
                 episode_length=(min_duration + int(step_size * n)), action_repeat=1
             ),
             "fitness_scaler": config["problem"]["episode_length"] / (min_duration + int(step_size * n)),
@@ -97,7 +98,20 @@ def __compile_selection__(config: dict):
                                     tour_size=config["tour_size"])
     else:
         partial_selection = partial(fp_selection, n_elites=config["selection"]["elite_size"])
-    return jit(partial_selection)
+    inner_selection = jit(partial_selection)
+    if config.get("n_parallel_runs", 1) == 1:
+        return inner_selection
+    else:
+        def composite_selection(genomes, fitness_values, select_key):
+            parents_list = []
+            for run_idx in config["runs_indexes"]:
+                rnd_key, sel_key = random.split(select_key, 2)
+                current_parents = composed_selection(genomes, fitness_values, sel_key, run_idx, inner_selection)
+                parents_list.append(current_parents)
+            parents_matrix = jnp.array(parents_list)
+            return jnp.reshape(parents_matrix, (-1, parents_matrix.shape[-1]))
+
+        return composite_selection
 
 
 def __compute_masks__(config: dict):
@@ -108,3 +122,40 @@ def __compute_masks__(config: dict):
         genome_mask = compute_lgp_genome_mask(config, config["n_in"])
         mutation_mask = compute_lgp_mutation_prob_mask(config)
     return genome_mask, mutation_mask
+
+
+def __init_tracking__(config: dict):
+    if config.get("n_parallel_runs", 1) > 1:
+        trackers = [Tracker(config, idx=k) for k in range(config["n_parallel_runs"])]
+        tracker_states = [t.init() for t in trackers]
+        return trackers, tracker_states
+    else:
+        tracker = Tracker(config)
+        tracker_state = tracker.init()
+        return tracker, tracker_state
+
+
+def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
+                        times: dict, wdb_run):
+    if config.get("n_parallel_runs", 1) == 1:
+        tracker, tracker_state = tracking_objects
+        tracker_state = tracker.update(
+            tracker_state=tracker_state,
+            fitness=fitness_values,
+            best_individual=genomes.at[jnp.argmax(fitness_values)].get(),
+            times=times
+        )
+        tracker.wandb_log(tracker_state, wdb_run)
+    else:
+        trackers, tracker_states = tracking_objects
+        for run_idx in range(config["n_parallel_runs"]):
+            current_indexes = config["runs_indexes"].at[run_idx, :].get()
+            sub_fitness = jnp.take(fitness_values, current_indexes, axis=0)
+            sub_genomes = jnp.take(genomes, current_indexes, axis=0)
+            tracker_states[run_idx] = trackers[run_idx].update(
+                tracker_state=tracker_states[run_idx],
+                fitness=sub_fitness,
+                best_individual=sub_genomes.at[jnp.argmax(sub_fitness)].get(),
+                times=times
+            )
+            trackers[run_idx].wandb_log(tracker_states[run_idx], wdb_run)
