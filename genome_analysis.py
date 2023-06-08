@@ -3,7 +3,7 @@ from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
 
 from jax import random
-from brax.io import html
+from brax.v1.io import html
 import cgpax.jax_encoding
 
 from jax import jit
@@ -40,14 +40,14 @@ def __save_graph__(genome: jnp.ndarray, config: dict, file: str, input_color: st
         print(f"Cannot save graph for {config['solver']}")
 
 
-def __save_html_visualization__(genome: jnp.ndarray, config: dict, file_prefix: str = None):
+def __save_html_visualization__(genome: jnp.ndarray, config: dict, env, file_prefix: str = None):
     if file_prefix is None:
         file_prefix = environment
 
     # initial state visualization
     state = jit(env.reset)(rng=random.PRNGKey(seed=config["seed"]))
     with open(f"{file_prefix}_initial.html", "w") as f_initial:
-        f_initial.write(html.render(env.sys, [state.pipeline_state]))
+        f_initial.write(html.render(env.sys, [state.qp]))
 
     # full episode visualization
     if config["solver"] == "cgp":
@@ -64,14 +64,13 @@ def __save_html_visualization__(genome: jnp.ndarray, config: dict, file_prefix: 
     buffer = jnp.zeros(config["buffer_size"]) if config["solver"] == "cgp" else jnp.zeros(config["n_registers"])
     reward = 0
     for _ in range(config["problem"]["episode_length"]):
-        rollout.append(state.pipeline_state)
+        rollout.append(state)
         buffer, actions = jit_program(state.obs, buffer)
         state = jit_env_step(state, actions)
         reward += state.reward
 
     with open(f"{file_prefix}_episode.html", "w") as f_episode:
-        f_episode.write(html.render(env.sys.replace(dt=env.dt), rollout))
-
+        f_episode.write(html.render(env.sys, [s.qp for s in rollout]))
     return reward
 
 
@@ -80,8 +79,8 @@ analysis_config = {
     "seed": 0,
     "generation": 399,
     "target_dir": "outcomes",
-    "program_file": True,
-    "graph_file": True,
+    "program_file": False,
+    "graph_file": False,
     "save_visualization": True,
 }
 
@@ -105,5 +104,5 @@ if __name__ == '__main__':
         __save_graph__(genome, config, f"{target_dir}/{solver}_{environment}.png", "green", "red")
 
     if analysis_config["save_visualization"]:
-        replay_reward = __save_html_visualization__(genome, config, f"{target_dir}/{solver}_{environment}")
+        replay_reward = __save_html_visualization__(genome, config, env, f"{target_dir}/{solver}_{environment}")
         print(f"\nTotal reward = {replay_reward}")
