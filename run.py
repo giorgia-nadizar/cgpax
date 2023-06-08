@@ -1,8 +1,5 @@
 import time
 
-import yaml
-from cgpax.jax_functions import JaxFunction
-
 import cgpax
 import wandb
 from jax import jit, default_backend
@@ -58,7 +55,7 @@ def run_merge(config: dict, wdb_run):
     # evolutionary loop
     for _generation in range(config["n_generations"]):
         # check if env needs update
-        if config["problem"]["incremental_steps"] > 1 and _generation in start_gens:
+        if start_gens and _generation in start_gens:
             env_idx = start_gens.index(_generation)
             env_dict = envs[env_idx]
             assert env_dict["start_gen"] == _generation
@@ -125,10 +122,9 @@ if __name__ == '__main__':
     assert default_backend() == "gpu"
 
     config_file = "configs/cgp.yaml"
-    config = cgpax.get_config(config_file)
-    envs = ["hopper", "halfcheetah", "ant"]
-    for env in envs:
-        config["problem"]["environment"] = env
-        wdb_run = wandb.init(config=config, project="cgpax")
-        run_merge(config, wdb_run)
+    cfg = cgpax.get_config(config_file)
+    for e in ["hopper", "halfcheetah", "ant"]:
+        cfg["problem"]["environment"] = e
+        wdb_run = wandb.init(config=cfg, project="cgpax")
+        run_merge(cfg, wdb_run)
         wdb_run.finish()
