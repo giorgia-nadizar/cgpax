@@ -74,7 +74,7 @@ def genome_to_lgp_program(genome: jnp.ndarray, config: dict):
 
     lhs_genes, x_genes, y_genes, f_genes = jnp.split(genome, 4)
 
-    def program(inputs: jnp.ndarray, registers: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
+    def program(inputs: jnp.ndarray, register: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
         register = jnp.zeros(n_registers)
         _, register = fori_loop(0, n_in, __copy_inputs__, (inputs, register))
         _, _, _, _, _, register = fori_loop(0, n_rows, __update_register__,

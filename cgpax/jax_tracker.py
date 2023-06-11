@@ -39,7 +39,7 @@ class Tracker:
 
     @partial(jit, static_argnums=(0,))
     def update(self, tracker_state: chex.ArrayTree, fitness: chex.Array, best_individual: chex.Array,
-               selection_time: float, mutation_time: float, evaluation_time: float) -> chex.ArrayTree:
+               times: dict) -> chex.ArrayTree:
         i = tracker_state["generation"]
         # [Training] - update top_k_fitness using old state (carry best over)
         # last_fit = (tracker_state["training"]["top_k_fit"].at[i - 1].get(mode="fill", fill_value=0.0))
@@ -70,11 +70,11 @@ class Tracker:
 
         # NOTE: Update times taken for the generation
         tracker_state["training"]["selection_time"] = (
-            tracker_state["training"]["selection_time"].at[i].set(selection_time))
+            tracker_state["training"]["selection_time"].at[i].set(times["selection_time"]))
         tracker_state["training"]["mutation_time"] = (
-            tracker_state["training"]["mutation_time"].at[i].set(mutation_time))
+            tracker_state["training"]["mutation_time"].at[i].set(times["mutation_time"]))
         tracker_state["training"]["evaluation_time"] = (
-            tracker_state["training"]["evaluation_time"].at[i].set(evaluation_time))
+            tracker_state["training"]["evaluation_time"].at[i].set(times["evaluation_time"]))
 
         # NOTE: Update backup individuals
         tracker_state["backup"]["best_individual"] = (
