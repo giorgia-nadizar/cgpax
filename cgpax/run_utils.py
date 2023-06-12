@@ -47,6 +47,9 @@ def __update_config_with_env_data__(config: dict, env):
     if config["solver"] == "cgp":
         config["buffer_size"] = config["n_in"] + config["n_nodes"]
         config["genome_size"] = 3 * config["n_nodes"] + config["n_out"]
+        levels_back = config.get("levels_back")
+        if levels_back is not None and levels_back < config["n_in"]:
+            config["levels_back"] = config["n_in"]
     else:
         config["n_registers"] = config["n_in"] + config["n_extra_registers"] + config["n_out"]
         config["genome_size"] = 4 * config["n_rows"]
