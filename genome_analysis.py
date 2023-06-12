@@ -8,7 +8,8 @@ import cgpax.jax_encoding
 
 from jax import jit
 
-from cgpax.utils import readable_cgp_program_from_genome, graph_from_genome, readable_lgp_program_from_genome
+from cgpax.utils import readable_cgp_program_from_genome, cgp_graph_from_genome, readable_lgp_program_from_genome, \
+    lgp_graph_from_genome
 from cgpax.jax_encoding import genome_to_cgp_program, genome_to_lgp_program
 from cgpax.run_utils import __update_config_with_env_data__
 
@@ -27,22 +28,22 @@ def __write_readable_program__(genome: jnp.ndarray, config: dict, target_file: s
 
 def __save_graph__(genome: jnp.ndarray, config: dict, file: str, input_color: str = None, output_color: str = None):
     if config["solver"] == "cgp":
-        graph = graph_from_genome(genome, config)
-        graph.layout()
-        if input_color is not None or output_color is not None:
-            for node in graph.iternodes():
-                if node.startswith("i_") and input_color is not None:
-                    node.attr["color"] = input_color
-                elif node.startswith("o_") and output_color is not None:
-                    node.attr["color"] = output_color
-            graph.draw(file)
+        graph = cgp_graph_from_genome(genome, config)
     else:
-        print(f"Cannot save graph for {config['solver']}")
+        graph = lgp_graph_from_genome(genome, config)
+    graph.layout()
+    if input_color is not None or output_color is not None:
+        for node in graph.iternodes():
+            if node.startswith("i_") and input_color is not None:
+                node.attr["color"] = input_color
+            elif node.startswith("o_") and output_color is not None:
+                node.attr["color"] = output_color
+        graph.draw(file)
 
 
 def __save_html_visualization__(genome: jnp.ndarray, config: dict, env, file_prefix: str = None):
     if file_prefix is None:
-        file_prefix = environment
+        file_prefix = env_name
 
     # initial state visualization
     state = jit(env.reset)(rng=random.PRNGKey(seed=config["seed"]))
@@ -74,35 +75,26 @@ def __save_html_visualization__(genome: jnp.ndarray, config: dict, env, file_pre
     return reward
 
 
-analysis_config = {
-    "run": "run-20230608_150618-7e9255ta",
-    "seed": 0,
-    "generation": 399,
-    "target_dir": "outcomes",
-    "program_file": False,
-    "graph_file": False,
-    "save_visualization": True,
-}
-
 if __name__ == '__main__':
+    analysis_config = cgpax.get_config("configs/analysis.yaml")
     base_path = f"wandb/{analysis_config['run']}/files"
     target_dir = analysis_config['target_dir']
 
-    config = cgpax.get_config(f"{base_path}/config.yaml")
-    environment = config['problem']['environment']
-    solver = config['solver']
-    genome = jnp.load(f"{base_path}/genomes/{analysis_config['seed']}_{analysis_config['generation']}_best_genome.npy",
-                      allow_pickle=True).astype(int)
+    cfg = cgpax.get_config(f"{base_path}/config.yaml")
+    env_name = cfg['problem']['environment']
+    solver = cfg['solver']
+    genes = jnp.load(f"{base_path}/genomes/{analysis_config['seed']}_{analysis_config['generation']}_best_genome.npy",
+                     allow_pickle=True).astype(int)
 
-    env = envs.get_environment(env_name=environment)
-    env = EpisodeWrapper(env, episode_length=config["problem"]["episode_length"], action_repeat=1)
-    __update_config_with_env_data__(config, env)
+    environment = envs.get_environment(env_name=env_name)
+    environment = EpisodeWrapper(environment, episode_length=cfg["problem"]["episode_length"], action_repeat=1)
+    __update_config_with_env_data__(cfg, environment)
 
-    program_file = f"{target_dir}/{solver}_{environment}.txt" if analysis_config['program_file'] else None
-    __write_readable_program__(genome, config, program_file)
+    program_file = f"{target_dir}/{solver}_{env_name}.txt" if analysis_config['program_file'] else None
+    __write_readable_program__(genes, cfg, program_file)
     if analysis_config["graph_file"]:
-        __save_graph__(genome, config, f"{target_dir}/{solver}_{environment}.png", "green", "red")
+        __save_graph__(genes, cfg, f"{target_dir}/{solver}_{env_name}.png", "green", "red")
 
     if analysis_config["save_visualization"]:
-        replay_reward = __save_html_visualization__(genome, config, env, f"{target_dir}/{solver}_{environment}")
+        replay_reward = __save_html_visualization__(genes, cfg, environment, f"{target_dir}/{solver}_{env_name}")
         print(f"\nTotal reward = {replay_reward}")
