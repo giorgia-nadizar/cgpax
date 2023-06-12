@@ -23,3 +23,4 @@ selection:
   type: truncation
 solver: cgp
 survival: parents
+levels_back: 5

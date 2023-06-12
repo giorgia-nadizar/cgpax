@@ -25,6 +25,11 @@ def compute_cgp_genome_mask(config: dict, n_in: int, n_out: int) -> jnp.ndarray:
     n_nodes = config["n_nodes"]
     if config["recursive"]:
         in_mask = (n_in + n_nodes) * jnp.ones(n_nodes)
+    elif config.get("levels_back") is not None:
+        in_mask = jnp.minimum(
+            config["levels_back"] * jnp.ones(n_nodes),
+            jnp.arange(n_in, n_in + n_nodes)
+        )
     else:
         in_mask = jnp.arange(n_in, n_in + n_nodes)
     f_mask = config["n_functions"] * jnp.ones(n_nodes)

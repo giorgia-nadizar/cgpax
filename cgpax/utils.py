@@ -31,7 +31,11 @@ def __compute_active__(active, x_genes, y_genes, f_genes, n_in, idx):
 def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict):
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
+    levels_back = config.get("levels_back")
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
+    if levels_back is not None:
+        x_genes = jnp.arange(n_in, n_in + n_nodes) - x_genes
+        y_genes = jnp.arange(n_in, n_in + n_nodes) - y_genes
     active = compute_active(x_genes, y_genes, f_genes, out_genes, config)
     function_names = list(JaxFunction.existing_functions.keys())
     text_function = f"def program(inputs, buffer):\n" \
@@ -137,7 +141,11 @@ def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
 def cgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue", y_color: str = "orange"):
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
+    levels_back = config.get("levels_back")
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
+    if levels_back is not None:
+        x_genes = jnp.arange(n_in, n_in + n_nodes) - x_genes
+        y_genes = jnp.arange(n_in, n_in + n_nodes) - y_genes
     active = compute_active(x_genes, y_genes, f_genes, out_genes, config)
     function_names = list(JaxFunction.existing_functions.keys())
 
