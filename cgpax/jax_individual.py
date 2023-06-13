@@ -1,4 +1,5 @@
 from functools import partial
+from typing import Tuple
 
 from jax import vmap
 import jax.numpy as jnp
@@ -56,6 +57,18 @@ def generate_population(pop_size: int, genome_mask: jnp.ndarray, rnd_key: random
     partial_generate_genome = partial(generate_genome, genome_mask=genome_mask)
     vmap_generate_genome = vmap(partial_generate_genome)
     return vmap_generate_genome(rnd_key=subkeys)
+
+
+def one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray, rnd_key: random.PRNGKey) -> Tuple[
+    jnp.ndarray, jnp.ndarray]:
+    assert len(genome1) == len(genome2)
+    rnd_key, xover_key = random.split(rnd_key, 2)
+    crossover_point = random.randint(xover_key, (1, 0), 0, len(genome1))
+    before = jnp.arange(0, crossover_point)
+    after = jnp.arange(crossover_point, len(genome1))
+    offspring1 = jnp.concatenate((genome1.take(before), genome2.take(after)))
+    offspring2 = jnp.concatenate((genome2.take(before), genome1.take(after)))
+    return offspring1, offspring2
 
 
 def mutate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, genome_mask: jnp.ndarray,
