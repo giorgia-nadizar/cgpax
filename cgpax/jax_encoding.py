@@ -1,3 +1,5 @@
+from typing import Callable
+
 import jax.numpy as jnp
 from jax import jit
 from jax.lax import fori_loop
@@ -47,7 +49,8 @@ def __update_register__(row_idx, carry):
     return lhs_genes, x_genes, y_genes, f_genes, n_in, register
 
 
-def genome_to_cgp_program(genome: jnp.ndarray, config: dict):
+def genome_to_cgp_program(genome: jnp.ndarray, config: dict,
+                          outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh):
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
     levels_back = config.get("levels_back")
@@ -61,15 +64,15 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: dict):
         _, buffer = fori_loop(0, n_in, __copy_inputs__, (inputs, buffer))
         _, _, _, buffer = fori_loop(n_in, len(buffer), __update_buffer__, (x_genes, y_genes, f_genes, buffer))
         outputs = jnp.take(buffer, out_genes)
-        # TODO add the flag for non-bounded outputs
-        bounded_outputs = jnp.tanh(outputs)
+        bounded_outputs = outputs_wrapper(outputs)
 
         return buffer, bounded_outputs
 
     return jit(program)
 
 
-def genome_to_lgp_program(genome: jnp.ndarray, config: dict):
+def genome_to_lgp_program(genome: jnp.ndarray, config: dict,
+                          outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh):
     n_in = config["n_in"]
     n_out = config["n_out"]
     n_rows = config["n_rows"]
@@ -84,7 +87,7 @@ def genome_to_lgp_program(genome: jnp.ndarray, config: dict):
         _, _, _, _, _, register = fori_loop(0, n_rows, __update_register__,
                                             (lhs_genes, x_genes, y_genes, f_genes, n_in, register))
         outputs = jnp.take(register, output_positions)
-        bounded_outputs = jnp.tanh(outputs)
+        bounded_outputs = outputs_wrapper(outputs)
 
         return register, bounded_outputs
 
