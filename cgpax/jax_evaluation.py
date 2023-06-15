@@ -1,4 +1,7 @@
 from functools import partial
+from typing import Callable
+
+from brax.v1.envs.wrappers import EpisodeWrapper
 
 from cgpax.jax_encoding import genome_to_cgp_program, genome_to_lgp_program
 
@@ -7,41 +10,42 @@ from jax import random
 from jax import numpy as jnp
 
 
-def evaluate_cgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
-                                n_times: int, episode_length: int = 1000) -> jnp.ndarray:
+def __evaluate_genome_n_times__(evaluation_function: Callable, genome: jnp.ndarray, rnd_key: random.PRNGKey,
+                                config: dict, env: EpisodeWrapper, n_times: int,
+                                episode_length: int = 1000) -> jnp.ndarray:
     rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
     subkeys_array = jnp.array(subkeys)
-    partial_evaluate_genome = partial(evaluate_cgp_genome, config=config, env=env, episode_length=episode_length)
+    partial_evaluate_genome = partial(evaluation_function, config=config, env=env, episode_length=episode_length)
     vmap_evaluate_genome = vmap(partial_evaluate_genome, in_axes=(None, 0))
     return vmap_evaluate_genome(genome, subkeys_array)
 
 
-def evaluate_lgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
+def evaluate_cgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: EpisodeWrapper,
                                 n_times: int, episode_length: int = 1000) -> jnp.ndarray:
-    rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
-    subkeys_array = jnp.array(subkeys)
-    partial_evaluate_genome = partial(evaluate_lgp_genome, config=config, env=env, episode_length=episode_length)
-    vmap_evaluate_genome = vmap(partial_evaluate_genome, in_axes=(None, 0))
-    return vmap_evaluate_genome(genome, subkeys_array)
+    return __evaluate_genome_n_times__(evaluate_cgp_genome, genome, rnd_key, config, env, n_times, episode_length)
 
 
-def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
-                        episode_length: int = 1000) -> float:
-    program = genome_to_cgp_program(genome, config)
+def evaluate_lgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: EpisodeWrapper,
+                                n_times: int, episode_length: int = 1000) -> jnp.ndarray:
+    return __evaluate_genome_n_times__(evaluate_lgp_genome, genome, rnd_key, config, env, n_times, episode_length)
+
+
+def __evaluate_program__(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
+                         env: EpisodeWrapper, episode_length: int = 1000) -> float:
     state = jit(env.reset)(rnd_key)
 
     def rollout_loop(carry, x):
-        env_state, buffer, cum_reward = carry
+        env_state, program_state, cum_reward = carry
         inputs = env_state.obs
-        new_buffer, actions = program(inputs, buffer)
+        new_program_state, actions = program(inputs, program_state)
         new_state = jit(env.step)(env_state, actions)
         corrected_reward = new_state.reward * (1 - new_state.done)
-        new_carry = new_state, new_buffer, cum_reward + corrected_reward
+        new_carry = new_state, new_program_state, cum_reward + corrected_reward
         return new_carry, corrected_reward
 
     carry, _ = lax.scan(
         f=rollout_loop,
-        init=(state, jnp.zeros(config["buffer_size"]), state.reward),
+        init=(state, jnp.zeros(program_state_size), state.reward),
         xs=None,
         length=episode_length,
     )
@@ -49,28 +53,16 @@ def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: di
     return carry[-1]
 
 
-def evaluate_lgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env,
+def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: EpisodeWrapper,
                         episode_length: int = 1000) -> float:
-    program = genome_to_lgp_program(genome, config)
-    state = jit(env.reset)(rnd_key)
+    return __evaluate_program__(genome_to_cgp_program(genome, config), config["buffer_size"], rnd_key, env,
+                                episode_length)
 
-    def rollout_loop(carry, x):
-        env_state, register, cum_reward = carry
-        inputs = env_state.obs
-        register, actions = program(inputs, register)
-        new_state = jit(env.step)(env_state, actions)
-        corrected_reward = new_state.reward * (1 - new_state.done)
-        new_carry = new_state, register, cum_reward + corrected_reward
-        return new_carry, corrected_reward
 
-    carry, _ = lax.scan(
-        f=rollout_loop,
-        init=(state, jnp.zeros(config["n_registers"]), state.reward),
-        xs=None,
-        length=episode_length,
-    )
-
-    return carry[-1]
+def evaluate_lgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: EpisodeWrapper,
+                        episode_length: int = 1000) -> float:
+    return __evaluate_program__(genome_to_lgp_program(genome, config), config["n_registers"], rnd_key, env,
+                                episode_length)
 
 
 def evaluate_cgp_genome_regression(genome: jnp.ndarray, config: dict, observations: jnp.ndarray,
