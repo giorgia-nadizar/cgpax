@@ -47,7 +47,6 @@ def __init_environments__(config: dict) -> List:
 def __update_config_with_env_data__(config: dict, env) -> None:
     config["n_in"] = env.observation_size
     config["n_out"] = env.action_size
-    print(f"{env.observation_size} - {env.action_size}")
     if config["solver"] == "cgp":
         config["buffer_size"] = config["n_in"] + config["n_nodes"]
         config["genome_size"] = 3 * config["n_nodes"] + config["n_out"]
