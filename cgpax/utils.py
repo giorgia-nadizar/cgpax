@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 import jax.numpy as jnp
@@ -25,16 +25,17 @@ def compute_active(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndar
     return active
 
 
-def __compute_active__(active, x_genes, y_genes, f_genes, n_in, idx):
+def __compute_active__(active: np.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, n_in: int,
+                       idx: int):
     if not active[idx]:
         active[idx] = True
-        __compute_active__(active, x_genes, y_genes, f_genes, n_in, x_genes[idx - n_in])
+        __compute_active__(active, x_genes, y_genes, f_genes, n_in, int(x_genes[idx - n_in]))
         _, arity = list(JaxFunction.arities.items())[f_genes[idx - n_in]]
         if arity > 1:
-            __compute_active__(active, x_genes, y_genes, f_genes, n_in, y_genes[idx - n_in])
+            __compute_active__(active, x_genes, y_genes, f_genes, n_in, int(y_genes[idx - n_in]))
 
 
-def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict):
+def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
@@ -58,7 +59,7 @@ def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict):
     return text_function
 
 
-def readable_lgp_program_from_genome(genome: jnp.ndarray, config: dict):
+def readable_lgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
     lhs_genes, x_genes, y_genes, f_genes = jnp.split(genome, 4)
     function_names = list(JaxFunction.existing_functions.keys())
     text_function = f"def program(inputs, r):\n" \
@@ -78,7 +79,8 @@ def readable_lgp_program_from_genome(genome: jnp.ndarray, config: dict):
 
 
 def __reassign_variables__(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, lhs_ids: List,
-                           x_ids: List, y_ids: List, row_id: int, register_number: int, variable_name: str):
+                           x_ids: List, y_ids: List, row_id: int, register_number: int,
+                           variable_name: str) -> Tuple[List[str], List[str], List[str]]:
     current_row_id = row_id
     while current_row_id > 0:
         current_row_id -= 1
@@ -92,7 +94,8 @@ def __reassign_variables__(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes
     return lhs_ids, x_ids, y_ids
 
 
-def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue", y_color: str = "orange"):
+def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue",
+                          y_color: str = "orange") -> pgv.AGraph:
     lhs_genes, x_genes, y_genes, f_genes = jnp.split(genome, 4)
     lhs_genes += config['n_in']
     function_names = list(JaxFunction.existing_functions.keys())
@@ -140,7 +143,8 @@ def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
     return graph
 
 
-def cgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue", y_color: str = "orange"):
+def cgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue",
+                          y_color: str = "orange") -> pgv.AGraph:
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
