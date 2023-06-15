@@ -1,11 +1,14 @@
 from functools import partial
+from typing import Callable
 
 import jax.numpy as jnp
 from jax import random, vmap
 
 
 def composed_selection(genomes: jnp.ndarray, fitness_values: jnp.ndarray, rnd_key: random.PRNGKey,
-                       indexes: jnp.ndarray, selection_function):
+                       indexes: jnp.ndarray,
+                       selection_function: Callable[
+                           [jnp.ndarray, jnp.ndarray, random.PRNGKey], jnp.ndarray]) -> jnp.ndarray:
     sub_genomes = jnp.take(genomes, indexes, axis=0)
     sub_fitness_values = jnp.take(fitness_values, indexes, axis=0)
     return selection_function(sub_genomes, sub_fitness_values, rnd_key)
