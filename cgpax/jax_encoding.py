@@ -44,12 +44,8 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: dict,
                           outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh):
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
-    levels_back = config.get("levels_back")
 
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, [n_nodes, 2 * n_nodes, 3 * n_nodes])
-    if levels_back is not None:
-        x_genes = jnp.arange(n_in, n_in + n_nodes) - x_genes - 1
-        y_genes = jnp.arange(n_in, n_in + n_nodes) - y_genes - 1
 
     def program(inputs: jnp.ndarray, buffer: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
         _, buffer = fori_loop(0, n_in, __copy_inputs__, (inputs, buffer))

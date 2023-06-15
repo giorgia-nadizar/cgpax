@@ -1,10 +1,22 @@
 from functools import partial
-from typing import Tuple
+from typing import Tuple, Callable
 
 from jax import vmap
 import jax.numpy as jnp
 from jax import random
 from jax.lax import fori_loop
+
+from cgpax.utils import identity
+
+
+def levels_back_transformation_function(n_in: int, n_nodes: int) -> Callable[[jnp.ndarray], jnp.ndarray]:
+    def genome_transformation_function(genome: jnp.ndarray) -> jnp.ndarray:
+        x_genes, y_genes, other_genes = jnp.split(genome, [n_nodes, 2 * n_nodes])
+        x_genes = jnp.arange(n_in, n_in + n_nodes) - x_genes - 1
+        y_genes = jnp.arange(n_in, n_in + n_nodes) - y_genes - 1
+        return jnp.concatenate((x_genes, y_genes, other_genes))
+
+    return genome_transformation_function
 
 
 def compute_cgp_mutation_prob_mask(config: dict, n_out: int) -> jnp.ndarray:
@@ -47,20 +59,25 @@ def compute_lgp_genome_mask(config: dict, n_in: int) -> jnp.ndarray:
     return jnp.concatenate((lhs_mask, rhs_mask, rhs_mask, f_mask))
 
 
-def generate_genome(genome_mask: jnp.ndarray, rnd_key: random.PRNGKey) -> jnp.ndarray:
+def generate_genome(genome_mask: jnp.ndarray, rnd_key: random.PRNGKey,
+                    genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray] = identity) -> jnp.ndarray:
     random_genome = random.uniform(key=rnd_key, shape=genome_mask.shape)
-    return jnp.floor(random_genome * genome_mask).astype(int)
+    integer_genome = jnp.floor(random_genome * genome_mask).astype(int)
+    return genome_transformation_function(integer_genome)
 
 
-def generate_population(pop_size: int, genome_mask: jnp.ndarray, rnd_key: random.PRNGKey) -> jnp.ndarray:
+def generate_population(pop_size: int, genome_mask: jnp.ndarray, rnd_key: random.PRNGKey,
+                        genome_transformation_function: Callable[
+                            [jnp.ndarray], jnp.ndarray] = identity) -> jnp.ndarray:
     subkeys = random.split(rnd_key, pop_size)
-    partial_generate_genome = partial(generate_genome, genome_mask=genome_mask)
+    partial_generate_genome = partial(generate_genome, genome_mask=genome_mask,
+                                      genome_transformation_function=genome_transformation_function)
     vmap_generate_genome = vmap(partial_generate_genome)
     return vmap_generate_genome(rnd_key=subkeys)
 
 
-def one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray, rnd_key: random.PRNGKey) -> Tuple[
-    jnp.ndarray, jnp.ndarray]:
+def one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray,
+                                rnd_key: random.PRNGKey) -> Tuple[jnp.ndarray, jnp.ndarray]:
     assert len(genome1) == len(genome2)
     rnd_key, xover_key = random.split(rnd_key, 2)
     crossover_point = random.randint(xover_key, (1, 0), 0, len(genome1))
@@ -71,10 +88,10 @@ def one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray, rnd_
     return offspring1, offspring2
 
 
-def mutate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, genome_mask: jnp.ndarray,
-                  mutation_mask: jnp.ndarray) -> jnp.ndarray:
+def mutate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
+                  genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray] = identity) -> jnp.ndarray:
     prob_key, new_genome_key = random.split(rnd_key, 2)
-    new_genome = generate_genome(genome_mask, new_genome_key)
+    new_genome = generate_genome(genome_mask, new_genome_key, genome_transformation_function)
     mutation_probs = random.uniform(key=rnd_key, shape=mutation_mask.shape)
     old_ids = (mutation_probs >= mutation_mask)
     new_ids = (mutation_probs < mutation_mask)
@@ -82,23 +99,27 @@ def mutate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, genome_mask: jnp
 
 
 def mutate_genome_n_times_stacked(genome: jnp.ndarray, rnd_key: random.PRNGKey, n_mutations: int,
-                                  genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray) -> jnp.ndarray:
+                                  genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
+                                  genome_transformation_function: Callable[
+                                      [jnp.ndarray], jnp.ndarray] = identity) -> jnp.ndarray:
     def mutate_and_store(idx, carry):
-        genomes, genome, rnd_key, genome_mask, mutation_mask = carry
+        genomes, genome, rnd_key = carry
         rnd_key, mutation_key = random.split(rnd_key, 2)
-        new_genome = mutate_genome(genome, mutation_key, genome_mask, mutation_mask)
+        new_genome = mutate_genome(genome, mutation_key, genome_mask, mutation_mask, genome_transformation_function)
         genomes = genomes.at[idx].set(new_genome)
-        return genomes, new_genome, rnd_key, genome_mask, mutation_mask
+        return genomes, new_genome, rnd_key
 
     genomes = jnp.zeros((n_mutations, len(genome)), dtype=int)
-    mutated_genomes, _, _, _, _ = fori_loop(0, n_mutations, mutate_and_store,
-                                            (genomes, genome, rnd_key, genome_mask, mutation_mask))
+    mutated_genomes, _, _, _, _ = fori_loop(0, n_mutations, mutate_and_store, (genomes, genome, rnd_key))
     return mutated_genomes
 
 
 def mutate_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, n_mutations: int, genome_mask: jnp.ndarray,
-                          mutation_mask: jnp.ndarray) -> jnp.ndarray:
+                          mutation_mask: jnp.ndarray,
+                          genome_transformation_function: Callable[
+                              [jnp.ndarray], jnp.ndarray] = identity) -> jnp.ndarray:
     subkeys = random.split(rnd_key, n_mutations)
-    partial_mutate_genome = partial(mutate_genome, genome=genome, genome_mask=genome_mask, mutation_mask=mutation_mask)
+    partial_mutate_genome = partial(mutate_genome, genome=genome, genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                    genome_transformation_function=genome_transformation_function)
     vmap_mutate_genome = vmap(partial_mutate_genome)
     return vmap_mutate_genome(rnd_key=subkeys)

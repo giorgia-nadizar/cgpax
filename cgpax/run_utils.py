@@ -1,4 +1,5 @@
 from functools import partial
+from typing import List, Callable
 
 from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
@@ -8,21 +9,23 @@ import jax.numpy as jnp
 from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times
 from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
-    compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask
+    compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask, \
+    levels_back_transformation_function
 from cgpax.jax_selection import truncation_selection, tournament_selection, fp_selection, composed_selection
 from cgpax.jax_tracker import Tracker
+from cgpax.utils import identity
 
 
 # TODO move within individual files?
 
-def __init_environment__(config: dict):
+def __init_environment__(config: dict) -> EpisodeWrapper:
     env = envs.get_environment(env_name=config["problem"]["environment"])
     return EpisodeWrapper(
         env, episode_length=config["problem"]["episode_length"], action_repeat=1
     )
 
 
-def __init_environments__(config: dict):
+def __init_environments__(config: dict) -> List:
     n_steps = config["problem"]["incremental_steps"]
     min_duration = config["problem"]["min_length"]
     step_size = (config["problem"]["episode_length"] - min_duration) / (n_steps - 1)
@@ -41,9 +44,10 @@ def __init_environments__(config: dict):
     ]
 
 
-def __update_config_with_env_data__(config: dict, env):
+def __update_config_with_env_data__(config: dict, env) -> None:
     config["n_in"] = env.observation_size
     config["n_out"] = env.action_size
+    print(f"{env.observation_size} - {env.action_size}")
     if config["solver"] == "cgp":
         config["buffer_size"] = config["n_in"] + config["n_nodes"]
         config["genome_size"] = 3 * config["n_nodes"] + config["n_out"]
@@ -80,15 +84,18 @@ def __compile_genome_evaluation__(config: dict, env, episode_length: int):
     return jit(vmap_evaluate_genome)
 
 
-def __compile_mutation__(config: dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray):
+def __compile_mutation__(config: dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
+                         genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray]):
     n_mutations_per_individual = int(
         (config["n_individuals"] - config["selection"]["elite_size"]) / config["selection"]["elite_size"])
     if config["mutation"] == "standard":
         partial_multiple_mutations = partial(mutate_genome_n_times, n_mutations=n_mutations_per_individual,
-                                             genome_mask=genome_mask, mutation_mask=mutation_mask)
+                                             genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                             genome_transformation_function=genome_transformation_function)
     else:
         partial_multiple_mutations = partial(mutate_genome_n_times_stacked, n_mutations=n_mutations_per_individual,
-                                             genome_mask=genome_mask, mutation_mask=mutation_mask)
+                                             genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                             genome_transformation_function=genome_transformation_function)
     vmap_multiple_mutations = vmap(partial_multiple_mutations)
     return jit(vmap_multiple_mutations)
 
@@ -125,6 +132,13 @@ def __compute_masks__(config: dict):
         genome_mask = compute_lgp_genome_mask(config, config["n_in"])
         mutation_mask = compute_lgp_mutation_prob_mask(config)
     return genome_mask, mutation_mask
+
+
+def __compute_genome_transformation_function__(config: dict):
+    if config["solver"] == "cgp" and config.get("levels_back") is not None:
+        return levels_back_transformation_function(config["n_in"], config["n_nodes"])
+    else:
+        return identity
 
 
 def __init_tracking__(config: dict):
