@@ -15,15 +15,6 @@ def __copy_inputs__(idx, carry):
 
 
 @jit
-def __copy_outputs__(out_idx, carry):
-    out_genes, buffer, outputs = carry
-    outputs = outputs.at[out_idx].set(
-        buffer.at[out_genes.at[out_idx].get()].get()
-    )
-    return out_genes, buffer, outputs
-
-
-@jit
 def __update_buffer__(buffer_idx, carry):
     x_genes, y_genes, f_genes, buffer = carry
     n_in = len(buffer) - len(x_genes)
