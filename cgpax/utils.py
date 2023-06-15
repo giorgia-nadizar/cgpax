@@ -123,15 +123,15 @@ def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
                 y_ids[row_id] = None
             if int(lhs_genes.at[row_id].get()) in missing_outputs:
                 missing_outputs.remove(int(lhs_genes.at[row_id].get()))
-                lhs_ids[row_id] = f"{function.symbol}_{row_id}"
-                graph.add_edge(f"{function.symbol}_{row_id}",
+                lhs_ids[row_id] = f"{function.symbol} ({row_id})"
+                graph.add_edge(f"{function.symbol} ({row_id})",
                                f'o_{config["n_out"] - (config["n_registers"] - lhs_genes.at[row_id].get())}')
 
     renaming_dict = {}
     for row_id in range(n_rows):
         if lhs_ids[row_id] is not None:
             function = functions[f_genes.at[row_id].get()]
-            lhs = f"{function.symbol}_{row_id}"
+            lhs = f"{function.symbol} ({row_id})"
             renaming_dict[lhs_ids[row_id]] = lhs
             x = x_ids[row_id] if x_ids[row_id].startswith("i_") else renaming_dict.get(x_ids[row_id], "0")
             if x == "0":
@@ -156,7 +156,7 @@ def cgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
     arities = []
     for f_id, fx in enumerate(f_genes):
         function = functions[fx]
-        node_ids.append(f"{function.symbol}_{f_id + n_in}")
+        node_ids.append(f"{function.symbol} ({f_id + n_in})")
         arities.append(function.arity)
     for out_id, out_gene in enumerate(out_genes):
         graph.add_edge(node_ids[out_gene], f"o_{out_id}")
