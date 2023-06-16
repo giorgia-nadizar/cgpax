@@ -156,7 +156,7 @@ def __init_tracking__(config: dict) -> Tuple:
         tracker_states = [t.init() for t in trackers]
         return trackers, tracker_states
     else:
-        tracker = Tracker(config)
+        tracker = Tracker(config, idx=config["seed"])
         tracker_state = tracker.init()
         return tracker, tracker_state
 
