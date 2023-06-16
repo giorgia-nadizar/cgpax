@@ -1,5 +1,5 @@
 from functools import partial
-from typing import List, Callable, Tuple
+from typing import List, Callable, Tuple, Dict, Union
 
 from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
@@ -16,8 +16,6 @@ from cgpax.jax_tracker import Tracker
 from cgpax.utils import identity
 
 
-# TODO move within individual files?
-
 def __init_environment__(config: dict) -> EpisodeWrapper:
     env = envs.get_environment(env_name=config["problem"]["environment"])
     return EpisodeWrapper(
@@ -25,7 +23,7 @@ def __init_environment__(config: dict) -> EpisodeWrapper:
     )
 
 
-def __init_environments__(config: dict) -> List:
+def __init_environments__(config: dict) -> List[Dict]:
     n_steps = config["problem"]["incremental_steps"]
     min_duration = config["problem"]["min_length"]
     step_size = (config["problem"]["episode_length"] - min_duration) / (n_steps - 1)
@@ -69,7 +67,7 @@ def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, 
     return indexes.astype(int)
 
 
-def __compile_genome_evaluation__(config: dict, env, episode_length: int):
+def __compile_genome_evaluation__(config: dict, env, episode_length: int) -> Callable:
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
     else:
@@ -84,7 +82,7 @@ def __compile_genome_evaluation__(config: dict, env, episode_length: int):
 
 
 def __compile_mutation__(config: dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
-                         genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray]):
+                         genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray]) -> Callable:
     n_mutations_per_individual = int(
         (config["n_individuals"] - config["selection"]["elite_size"]) / config["selection"]["elite_size"])
     if config["mutation"] == "standard":
@@ -99,7 +97,7 @@ def __compile_mutation__(config: dict, genome_mask: jnp.ndarray, mutation_mask: 
     return jit(vmap_multiple_mutations)
 
 
-def __compile_survival_selection__(config: dict):
+def __compile_survival_selection__(config: dict) -> Union[Callable, None]:
     if config["survival"] == "parents":
         return None
     elif config["survival"] == "truncation":
@@ -111,7 +109,7 @@ def __compile_survival_selection__(config: dict):
         return jit(partial(fp_selection, n_elites=config["selection"]["elite_size"]))
 
 
-def __compile_parents_selection__(config: dict):
+def __compile_parents_selection__(config: dict) -> Callable:
     if config["selection"]["type"] == "truncation":
         partial_selection = partial(truncation_selection, n_elites=config["selection"]["elite_size"])
     elif config["selection"]["type"] == "tournament":
@@ -135,7 +133,7 @@ def __compile_parents_selection__(config: dict):
         return composite_selection
 
 
-def __compute_masks__(config: dict):
+def __compute_masks__(config: dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
     if config["solver"] == "cgp":
         genome_mask = compute_cgp_genome_mask(config, config["n_in"], config["n_out"])
         mutation_mask = compute_cgp_mutation_prob_mask(config, config["n_out"])
@@ -145,14 +143,14 @@ def __compute_masks__(config: dict):
     return genome_mask, mutation_mask
 
 
-def __compute_genome_transformation_function__(config: dict):
+def __compute_genome_transformation_function__(config: dict) -> Callable[[jnp.ndarray], jnp.ndarray]:
     if config["solver"] == "cgp" and config.get("levels_back") is not None:
         return levels_back_transformation_function(config["n_in"], config["n_nodes"])
     else:
         return identity
 
 
-def __init_tracking__(config: dict):
+def __init_tracking__(config: dict) -> Tuple:
     if config.get("n_parallel_runs", 1) > 1:
         trackers = [Tracker(config, idx=k) for k in range(config["n_parallel_runs"])]
         tracker_states = [t.init() for t in trackers]
