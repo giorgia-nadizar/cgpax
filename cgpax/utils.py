@@ -14,32 +14,32 @@ def identity(x):
     return x
 
 
-def compute_active(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, out_genes: jnp.ndarray,
-                   config: dict) -> np.ndarray:
+def compute_active_graph(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, out_genes: jnp.ndarray,
+                         config: dict) -> np.ndarray:
     n_nodes = config["n_nodes"]
     n_in = config["n_in"]
     active = np.zeros(n_in + n_nodes)
     active[:n_in] = True
     for i in out_genes:
-        __compute_active__(active, x_genes, y_genes, f_genes, n_in, i)
+        __compute_active_graph__(active, x_genes, y_genes, f_genes, n_in, i)
     return active
 
 
-def __compute_active__(active: np.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, n_in: int,
-                       idx: int):
+def __compute_active_graph__(active: np.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray,
+                             n_in: int, idx: int) -> None:
     if not active[idx]:
         active[idx] = True
-        __compute_active__(active, x_genes, y_genes, f_genes, n_in, int(x_genes[idx - n_in]))
+        __compute_active_graph__(active, x_genes, y_genes, f_genes, n_in, int(x_genes[idx - n_in]))
         arity = list(available_functions.values())[f_genes[idx - n_in]].arity
         if arity > 1:
-            __compute_active__(active, x_genes, y_genes, f_genes, n_in, int(y_genes[idx - n_in]))
+            __compute_active_graph__(active, x_genes, y_genes, f_genes, n_in, int(y_genes[idx - n_in]))
 
 
 def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
-    active = compute_active(x_genes, y_genes, f_genes, out_genes, config)
+    active = compute_active_graph(x_genes, y_genes, f_genes, out_genes, config)
     functions = list(available_functions.values())
     text_function = f"def program(inputs, buffer):\n" \
                     f"  buffer[{list(range(n_in))}] = inputs\n"
@@ -59,19 +59,48 @@ def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
     return text_function
 
 
+def compute_coding_lines(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray,
+                         config: dict) -> np.ndarray:
+    active = np.zeros(config["n_rows"])
+    output_registers = set(range(config["n_registers"] - config["n_out"], config["n_registers"]))
+    for row_id in range(config["n_rows"] - 1, -1, -1):
+        if int(lhs_genes[row_id]) in output_registers:
+            output_registers.remove(int(lhs_genes[row_id]))
+            __compute_coding_lines__(active, lhs_genes, x_genes, y_genes, f_genes, row_id)
+    return active
+
+
+def __compute_coding_lines__(active: np.ndarray, lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray,
+                             f_genes: jnp.ndarray, row_id: int) -> None:
+    active[row_id] = True
+    for new_row_id in range(row_id - 1, -1, -1):
+        if lhs_genes.at[new_row_id].get() == x_genes.at[row_id].get():
+            __compute_coding_lines__(active, lhs_genes, x_genes, y_genes, f_genes, new_row_id)
+            break
+    arity = list(available_functions.values())[f_genes.at[row_id].get()].arity
+    if arity > 1:
+        for new_row_id in range(row_id - 1, -1, -1):
+            if lhs_genes.at[new_row_id].get() == y_genes.at[row_id].get():
+                __compute_coding_lines__(active, lhs_genes, x_genes, y_genes, f_genes, new_row_id)
+                break
+
+
 def readable_lgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
     lhs_genes, x_genes, y_genes, f_genes = jnp.split(genome, 4)
+    lhs_genes += config["n_in"]
     functions = list(available_functions.values())
     text_function = f"def program(inputs, r):\n" \
                     f"  r[{list(range(config['n_in']))}] = inputs\n"
 
+    active = compute_coding_lines(lhs_genes, x_genes, y_genes, f_genes, config)
     # execution
     for row_idx in range(config["n_rows"]):
-        function = functions[f_genes[row_idx]]
-        text_function += f"  r[{lhs_genes[row_idx] + config['n_in']}] = {function.symbol}(r[{x_genes[row_idx]}]"
-        if function.arity > 1:
-            text_function += f", r[{y_genes[row_idx]}]"
-        text_function += ")\n"
+        if active[row_idx]:
+            function = functions[f_genes[row_idx]]
+            text_function += f"  r[{lhs_genes[row_idx]}] = {function.symbol}(r[{x_genes[row_idx]}]"
+            if function.arity > 1:
+                text_function += f", r[{y_genes[row_idx]}]"
+            text_function += ")\n"
 
     # output selection
     text_function += f"  outputs = r[-{config['n_out']}:]\n"
@@ -134,8 +163,6 @@ def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
             lhs = f"{function.symbol} ({row_id})"
             renaming_dict[lhs_ids[row_id]] = lhs
             x = x_ids[row_id] if x_ids[row_id].startswith("i_") else renaming_dict.get(x_ids[row_id], "0")
-            if x == "0":
-                print(x_ids[row_id])
             graph.add_edge(x, lhs, color=x_color)
             if y_ids[row_id] is not None:
                 y = y_ids[row_id] if y_ids[row_id].startswith("i_") else renaming_dict.get(y_ids[row_id], "0")
@@ -148,7 +175,7 @@ def cgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
     n_in = config["n_in"]
     n_nodes = config["n_nodes"]
     x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
-    active = compute_active(x_genes, y_genes, f_genes, out_genes, config)
+    active = compute_active_graph(x_genes, y_genes, f_genes, out_genes, config)
     functions = list(available_functions.values())
 
     graph = pgv.AGraph(directed=True)
