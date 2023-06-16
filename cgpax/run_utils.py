@@ -1,5 +1,5 @@
 from functools import partial
-from typing import List, Callable
+from typing import List, Callable, Tuple
 
 from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
@@ -99,12 +99,24 @@ def __compile_mutation__(config: dict, genome_mask: jnp.ndarray, mutation_mask: 
     return jit(vmap_multiple_mutations)
 
 
-def __compile_selection__(config: dict):
+def __compile_survival_selection__(config: dict):
+    if config["survival"] == "parents":
+        return None
+    elif config["survival"] == "truncation":
+        return jit(partial(truncation_selection, n_elites=config["selection"]["elite_size"]))
+    elif config["survival"] == "tournament":
+        return jit(partial(tournament_selection, n_elites=config["selection"]["elite_size"],
+                           tour_size=config["selection"]["tour_size"]))
+    else:
+        return jit(partial(fp_selection, n_elites=config["selection"]["elite_size"]))
+
+
+def __compile_parents_selection__(config: dict):
     if config["selection"]["type"] == "truncation":
         partial_selection = partial(truncation_selection, n_elites=config["selection"]["elite_size"])
     elif config["selection"]["type"] == "tournament":
         partial_selection = partial(tournament_selection, n_elites=config["selection"]["elite_size"],
-                                    tour_size=config["tour_size"])
+                                    tour_size=config["selection"]["tour_size"])
     else:
         partial_selection = partial(fp_selection, n_elites=config["selection"]["elite_size"])
     inner_selection = jit(partial_selection)
@@ -152,7 +164,7 @@ def __init_tracking__(config: dict):
 
 
 def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
-                        times: dict, wdb_run):
+                        times: dict, wdb_run) -> Tuple:
     if config.get("n_parallel_runs", 1) == 1:
         tracker, tracker_state = tracking_objects
         tracker_state = tracker.update(
@@ -162,6 +174,7 @@ def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndar
             times=times
         )
         tracker.wandb_log(tracker_state, wdb_run)
+        return tracker, tracker_state
     else:
         trackers, tracker_states = tracking_objects
         for run_idx in range(config["n_parallel_runs"]):
@@ -175,3 +188,4 @@ def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndar
                 times=times
             )
             trackers[run_idx].wandb_log(tracker_states[run_idx], wdb_run)
+        return trackers, tracker_states
