@@ -13,7 +13,7 @@ from functools import partial
 from cgpax.jax_individual import generate_population
 
 from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_selection__, __compile_mutation__, \
-    __init_environment__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
+    __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
     __compile_survival_selection__
 
@@ -34,7 +34,7 @@ def run(config: dict, wandb_run: Run) -> None:
         fitness_scaler = env_dict["fitness_scaler"]
     else:
         environments, start_gens = None, None
-        environment = __init_environment__(config)
+        environment = __init_environment_from_config__(config)
         fitness_scaler = 1.0
     __update_config_with_env_data__(config, environment)
 
@@ -75,7 +75,8 @@ def run(config: dict, wandb_run: Run) -> None:
         # evaluate population
         rnd_key, *eval_keys = random.split(rnd_key, len(genomes) + 1)
         start_eval = time.process_time()
-        fitness_values = replace_invalid_nan_fitness(evaluate_genomes(genomes, jnp.array(eval_keys))) * fitness_scaler
+        evaluation_outcomes = evaluate_genomes(genomes, jnp.array(eval_keys))
+        fitness_values = replace_invalid_nan_fitness(evaluation_outcomes["fitness"]) * fitness_scaler
         end_eval = time.process_time()
         times["evaluation_time"] = end_eval - start_eval
 

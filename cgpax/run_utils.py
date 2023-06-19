@@ -3,6 +3,9 @@ from typing import List, Callable, Tuple, Dict, Union
 
 from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
+from wandb.apis.public import Run
+
+from environments.locomotion_wrappers import XYPositionWrapper
 from jax import vmap, jit, random
 import jax.numpy as jnp
 
@@ -16,11 +19,15 @@ from cgpax.jax_tracker import Tracker
 from cgpax.utils import identity
 
 
-def __init_environment__(config: dict) -> EpisodeWrapper:
-    env = envs.get_environment(env_name=config["problem"]["environment"])
-    return EpisodeWrapper(
-        env, episode_length=config["problem"]["episode_length"], action_repeat=1
-    )
+def __init_environment__(env_name: str, episode_length: int) -> XYPositionWrapper:
+    env = envs.get_environment(env_name=env_name)
+    env = EpisodeWrapper(env, episode_length=episode_length, action_repeat=1)
+    env = XYPositionWrapper(env=env, env_name=env_name)
+    return env
+
+
+def __init_environment_from_config__(config: dict) -> XYPositionWrapper:
+    return __init_environment__(config["problem"]["environment"], config["problem"]["episode_length"])
 
 
 def __init_environments__(config: dict) -> List[Dict]:
@@ -31,10 +38,9 @@ def __init_environments__(config: dict) -> List[Dict]:
     return [
         {
             "start_gen": gen_step_size * n,
-            "env": EpisodeWrapper(
-                envs.get_environment(env_name=config["problem"]["environment"]),
-                episode_length=(min_duration + int(step_size * n)), action_repeat=1
-            ),
+            "env": __init_environment__(env_name=config["problem"]["environment"],
+                                        episode_length=(min_duration + int(step_size * n))
+                                        ),
             "fitness_scaler": config["problem"]["episode_length"] / (min_duration + int(step_size * n)),
             "duration": (min_duration + int(step_size * n))
         }
@@ -67,7 +73,7 @@ def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, 
     return indexes.astype(int)
 
 
-def __compile_genome_evaluation__(config: dict, env, episode_length: int) -> Callable:
+def __compile_genome_evaluation__(config: dict, env: XYPositionWrapper, episode_length: int) -> Callable:
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
     else:
@@ -162,7 +168,7 @@ def __init_tracking__(config: dict) -> Tuple:
 
 
 def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
-                        times: dict, wdb_run) -> Tuple:
+                        times: dict, wdb_run: Run) -> Tuple:
     if config.get("n_parallel_runs", 1) == 1:
         tracker, tracker_state = tracking_objects
         tracker_state = tracker.update(
