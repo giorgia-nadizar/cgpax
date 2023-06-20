@@ -21,6 +21,7 @@ def compute_active_size(genome: jnp.ndarray, config: dict) -> Tuple[int, int]:
         active = compute_active_graph(x_genes, y_genes, f_genes, out_genes, config)
     else:
         lhs_genes, x_genes, y_genes, f_genes = jnp.split(genome, 4)
+        lhs_genes += config["n_in"]
         active = compute_coding_lines(lhs_genes, x_genes, y_genes, f_genes, config)
     return int(jnp.sum(active)), len(active)
 
