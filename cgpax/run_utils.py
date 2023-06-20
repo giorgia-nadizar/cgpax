@@ -1,5 +1,5 @@
 from functools import partial
-from typing import List, Callable, Tuple, Dict, Union
+from typing import List, Callable, Tuple, Dict, Union, Set
 
 from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
@@ -168,12 +168,13 @@ def __init_tracking__(config: dict) -> Tuple:
 
 
 def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
-                        times: dict, wdb_run: Run) -> Tuple:
+                        rewards: jnp.ndarray, times: dict, wdb_run: Run) -> Tuple:
     if config.get("n_parallel_runs", 1) == 1:
         tracker, tracker_state = tracking_objects
         tracker_state = tracker.update(
             tracker_state=tracker_state,
             fitness=fitness_values,
+            rewards=rewards,
             best_individual=genomes.at[jnp.argmax(fitness_values)].get(),
             times=times
         )
@@ -184,10 +185,12 @@ def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndar
         for run_idx in range(config["n_parallel_runs"]):
             current_indexes = config["runs_indexes"].at[run_idx, :].get()
             sub_fitness = jnp.take(fitness_values, current_indexes, axis=0)
+            sub_rewards = jnp.take(rewards, current_indexes, axis=0)
             sub_genomes = jnp.take(genomes, current_indexes, axis=0)
             tracker_states[run_idx] = trackers[run_idx].update(
                 tracker_state=tracker_states[run_idx],
                 fitness=sub_fitness,
+                rewards=sub_rewards,
                 best_individual=sub_genomes.at[jnp.argmax(sub_fitness)].get(),
                 times=times
             )
