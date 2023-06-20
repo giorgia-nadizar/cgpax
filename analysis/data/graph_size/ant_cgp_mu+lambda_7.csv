@@ -1,0 +1,11 @@
+,seed,generation,graph_size,max_size,solver,ea,environment
+0,7,599,91,137,cgp,mu+lambda,ant
+1,7,99,88,137,cgp,mu+lambda,ant
+2,7,199,89,137,cgp,mu+lambda,ant
+3,7,799,89,137,cgp,mu+lambda,ant
+4,7,399,91,137,cgp,mu+lambda,ant
+5,7,299,89,137,cgp,mu+lambda,ant
+6,7,899,89,137,cgp,mu+lambda,ant
+7,7,499,90,137,cgp,mu+lambda,ant
+8,7,999,89,137,cgp,mu+lambda,ant
+9,7,699,90,137,cgp,mu+lambda,ant

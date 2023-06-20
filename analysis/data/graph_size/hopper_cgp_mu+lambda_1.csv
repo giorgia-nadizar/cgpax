@@ -1,0 +1,11 @@
+,seed,generation,graph_size,max_size,solver,ea,environment
+0,1,599,15,61,cgp,mu+lambda,hopper
+1,1,99,24,61,cgp,mu+lambda,hopper
+2,1,199,14,61,cgp,mu+lambda,hopper
+3,1,799,15,61,cgp,mu+lambda,hopper
+4,1,399,15,61,cgp,mu+lambda,hopper
+5,1,299,15,61,cgp,mu+lambda,hopper
+6,1,899,16,61,cgp,mu+lambda,hopper
+7,1,499,17,61,cgp,mu+lambda,hopper
+8,1,999,16,61,cgp,mu+lambda,hopper
+9,1,699,15,61,cgp,mu+lambda,hopper

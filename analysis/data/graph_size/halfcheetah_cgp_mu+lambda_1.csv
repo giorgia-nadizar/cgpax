@@ -1,0 +1,11 @@
+,seed,generation,graph_size,max_size,solver,ea,environment
+0,1,599,26,68,cgp,mu+lambda,halfcheetah
+1,1,99,29,68,cgp,mu+lambda,halfcheetah
+2,1,199,30,68,cgp,mu+lambda,halfcheetah
+3,1,799,26,68,cgp,mu+lambda,halfcheetah
+4,1,399,21,68,cgp,mu+lambda,halfcheetah
+5,1,299,24,68,cgp,mu+lambda,halfcheetah
+6,1,899,27,68,cgp,mu+lambda,halfcheetah
+7,1,499,23,68,cgp,mu+lambda,halfcheetah
+8,1,999,32,68,cgp,mu+lambda,halfcheetah
+9,1,699,27,68,cgp,mu+lambda,halfcheetah
