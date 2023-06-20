@@ -14,6 +14,17 @@ def identity(x):
     return x
 
 
+def compute_active_size(genome: jnp.ndarray, config: dict) -> Tuple[int, int]:
+    if config["solver"] == "cgp":
+        n_nodes = config["n_nodes"]
+        x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray([n_nodes, 2 * n_nodes, 3 * n_nodes]))
+        active = compute_active_graph(x_genes, y_genes, f_genes, out_genes, config)
+    else:
+        lhs_genes, x_genes, y_genes, f_genes = jnp.split(genome, 4)
+        active = compute_coding_lines(lhs_genes, x_genes, y_genes, f_genes, config)
+    return int(jnp.sum(active)), len(active)
+
+
 def compute_active_graph(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, out_genes: jnp.ndarray,
                          config: dict) -> np.ndarray:
     n_nodes = config["n_nodes"]
