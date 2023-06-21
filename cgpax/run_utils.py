@@ -196,3 +196,32 @@ def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndar
             )
             trackers[run_idx].wandb_log(tracker_states[run_idx], wdb_run)
         return trackers, tracker_states
+
+
+def __normalize_array__(array: jnp.ndarray) -> jnp.ndarray:
+    min_val = jnp.min(array)
+    max_val = jnp.max(array)
+    return (array - min_val) / (max_val - min_val)
+
+
+@jit
+def __distance__(x1: float, x2: float) -> float:
+    return jnp.abs(x1 - x2)
+
+
+@jit
+def __compute_max_distance__(x_coord: float, x_pos_archive: jnp.ndarray) -> jnp.ndarray:
+    distances = vmap(__distance__, in_axes=(None, 0))(x_coord, x_pos_archive)
+    return jnp.max(distances)
+
+
+def __compute_novelty_scores__(final_positions: jnp.ndarray, novelty_archive: Set, decimals: int = 2) -> jnp.ndarray:
+    x_coordinates = final_positions.at[:, :, 0].get()
+    x_coordinates_flat = x_coordinates.flatten()
+    archive_array = jnp.asarray(list(novelty_archive))
+    max_distances = vmap(__compute_max_distance__, in_axes=(0, None))(x_coordinates_flat, archive_array)
+    max_distances = max_distances.reshape(x_coordinates.shape)
+    rounded_positions = jnp.around(x_coordinates_flat, decimals=decimals)
+    for pos in rounded_positions[~jnp.isnan(rounded_positions)]:
+        novelty_archive.add(float(pos))
+    return max_distances

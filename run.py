@@ -15,11 +15,16 @@ from cgpax.jax_individual import generate_population
 from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_selection__, __compile_mutation__, \
     __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
-    __compile_survival_selection__
+    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__
 
 
 def run(config: dict, wandb_run: Run) -> None:
     rnd_key = random.PRNGKey(config["seed"])
+
+    novelty_archive, alpha = None, 0
+    if config.get("novelty") is not None:
+        novelty_archive = {0}
+        alpha = config["novelty"].get("alpha", 0.5)
 
     if config.get("n_parallel_runs", 1) > 1:
         runs_indexes = __compute_parallel_runs_indexes__(config["n_individuals"], config["n_parallel_runs"])
@@ -37,6 +42,7 @@ def run(config: dict, wandb_run: Run) -> None:
         environment = __init_environment_from_config__(config)
         fitness_scaler = 1.0
     __update_config_with_env_data__(config, environment)
+    wandb.config.update(config, allow_val_change=True)
 
     # preliminary evo steps
     genome_mask, mutation_mask = __compute_masks__(config)
@@ -46,7 +52,8 @@ def run(config: dict, wandb_run: Run) -> None:
     evaluate_genomes = __compile_genome_evaluation__(config, environment, config["problem"]["episode_length"])
     select_parents = __compile_parents_selection__(config)
     mutate_genomes = __compile_mutation__(config, genome_mask, mutation_mask, genome_transformation_function)
-    replace_invalid_nan_fitness = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
+    replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
+    replace_invalid_nan_novelty = jit(partial(jnp.nan_to_num, nan=0))
     select_survivals = __compile_survival_selection__(config)
 
     # initialize tracking
@@ -65,18 +72,23 @@ def run(config: dict, wandb_run: Run) -> None:
         if config["problem"]["incremental_steps"] > 1 and _generation in start_gens:
             env_idx = start_gens.index(_generation)
             env_dict = environments[env_idx]
-            assert env_dict["start_gen"] == _generation
             environment = env_dict["env"]
             fitness_scaler = env_dict["fitness_scaler"]
-            print(env_dict["duration"])
             evaluate_genomes = __compile_genome_evaluation__(config, environment, env_dict["duration"])
-            print("compiled")
 
         # evaluate population
         rnd_key, *eval_keys = random.split(rnd_key, len(genomes) + 1)
         start_eval = time.process_time()
         evaluation_outcomes = evaluate_genomes(genomes, jnp.array(eval_keys))
-        fitness_values = replace_invalid_nan_fitness(evaluation_outcomes["fitness"]) * fitness_scaler
+        reward_values = replace_invalid_nan_reward(evaluation_outcomes["fitness"]) * fitness_scaler
+        if novelty_archive is not None:
+            novelty_values = __compute_novelty_scores__(evaluation_outcomes["state_descriptor"], novelty_archive)
+            novelty_values = replace_invalid_nan_novelty(novelty_values)
+            normalized_reward = __normalize_array__(reward_values)
+            normalized_novelty = __normalize_array__(novelty_values)
+            fitness_values = alpha * normalized_reward + (1 - alpha) * normalized_novelty
+        else:
+            fitness_values = reward_values
         end_eval = time.process_time()
         times["evaluation_time"] = end_eval - start_eval
 
@@ -109,7 +121,8 @@ def run(config: dict, wandb_run: Run) -> None:
             f"FITNESS: {jnp.max(fitness_values)}"
         )
 
-        tracking_objects = __update_tracking__(config, tracking_objects, genomes, fitness_values, times, wandb_run)
+        tracking_objects = __update_tracking__(config, tracking_objects, genomes, fitness_values, reward_values, times,
+                                               wandb_run)
 
         # select survivals
         rnd_key, survival_key = random.split(rnd_key, 2)
