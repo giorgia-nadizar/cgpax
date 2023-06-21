@@ -14,6 +14,7 @@ if __name__ == '__main__':
     api = wandb.Api(timeout=40)
     entity, project = "giorgianadizar", "cgpax"
     runs = api.runs(entity + "/" + project)
+    counter = 0
     for wandb_run in runs:
         if wandb_run.state == "finished":
             solver = wandb_run.config["solver"]
@@ -21,16 +22,18 @@ if __name__ == '__main__':
                 solver += "-local"
             env_name = wandb_run.config["problem"]["environment"]
             ea = "1+lambda" if wandb_run.config["n_parallel_runs"] > 1 else "mu+lambda"
+            fitness = "reward"
             if wandb_run.config.get("novelty") is not None:
-                ea += "-novelty"
+                fitness = "novelty"
             if wandb_run.config.get("distance", False):
-                ea += "-distance"
+                fitness = "distance"
             seed = wandb_run.config["seed"]
-            run_name = f"{env_name}_{solver}_{ea}_{seed}"
+            run_name = f"{env_name}_{solver}_{ea}_{fitness}_{seed}"
             wandb_run.name = run_name
             wandb_run.update()
 
-            print(run_name)
+            print(f"{counter} -> {run_name}")
+            counter += 1
 
             # download history
             if not os.path.exists(f"data/fitness/{run_name}.csv"):
@@ -38,6 +41,7 @@ if __name__ == '__main__':
                 df = pd.DataFrame.from_dict(dct)
                 df["solver"] = solver
                 df["ea"] = ea
+                df["fitness"] = fitness
                 df["environment"] = env_name
                 df["seed"] = df["training.run_id"] if wandb_run.config.get("n_parallel_runs", 0) > 1 else \
                     wandb_run.config[
@@ -75,11 +79,13 @@ if __name__ == '__main__':
                     graph_sizes.append({
                         "seed": str(seed),
                         "generation": generation,
+                        "evaluation": generation * wandb_run.config["n_individuals"],
                         "graph_size": graph_size,
                         "max_size": max_size
                     })
                 graph_df = pd.DataFrame.from_dict(graph_sizes)
                 graph_df["solver"] = solver
                 graph_df["ea"] = ea
+                graph_df["fitness"] = fitness
                 graph_df["environment"] = env_name
                 graph_df.to_csv(f"data/graph_size/{run_name}.csv")
