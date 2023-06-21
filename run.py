@@ -15,7 +15,7 @@ from cgpax.jax_individual import generate_population
 from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_selection__, __compile_mutation__, \
     __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
-    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__
+    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compute_distance_run__
 
 
 def run(config: dict, wandb_run: Run) -> None:
@@ -53,7 +53,7 @@ def run(config: dict, wandb_run: Run) -> None:
     select_parents = __compile_parents_selection__(config)
     mutate_genomes = __compile_mutation__(config, genome_mask, mutation_mask, genome_transformation_function)
     replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
-    replace_invalid_nan_novelty = jit(partial(jnp.nan_to_num, nan=0))
+    replace_invalid_nan_zero = jit(partial(jnp.nan_to_num, nan=0))
     select_survivals = __compile_survival_selection__(config)
 
     # initialize tracking
@@ -83,10 +83,13 @@ def run(config: dict, wandb_run: Run) -> None:
         reward_values = replace_invalid_nan_reward(evaluation_outcomes["fitness"]) * fitness_scaler
         if novelty_archive is not None:
             novelty_values = __compute_novelty_scores__(evaluation_outcomes["state_descriptor"], novelty_archive)
-            novelty_values = replace_invalid_nan_novelty(novelty_values)
+            novelty_values = replace_invalid_nan_zero(novelty_values)
             normalized_reward = __normalize_array__(reward_values)
             normalized_novelty = __normalize_array__(novelty_values)
             fitness_values = alpha * normalized_reward + (1 - alpha) * normalized_novelty
+        elif config.get("distance", False):
+            distances = __compute_distance_run__(evaluation_outcomes["state_descriptor"])
+            fitness_values = replace_invalid_nan_zero(distances)
         else:
             fitness_values = reward_values
         end_eval = time.process_time()

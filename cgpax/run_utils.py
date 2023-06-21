@@ -205,12 +205,11 @@ def __normalize_array__(array: jnp.ndarray) -> jnp.ndarray:
 
 
 @jit
-def __distance__(x1: float, x2: float) -> float:
-    return jnp.abs(x1 - x2)
-
-
-@jit
 def __compute_max_distance__(x_coord: float, x_pos_archive: jnp.ndarray) -> jnp.ndarray:
+    @jit
+    def __distance__(x1: float, x2: float) -> float:
+        return jnp.abs(x1 - x2)
+
     distances = vmap(__distance__, in_axes=(None, 0))(x_coord, x_pos_archive)
     return jnp.max(distances)
 
@@ -225,3 +224,17 @@ def __compute_novelty_scores__(final_positions: jnp.ndarray, novelty_archive: Se
     for pos in rounded_positions[~jnp.isnan(rounded_positions)]:
         novelty_archive.add(float(pos))
     return max_distances
+
+
+def __compute_distance_run__(final_positions: jnp.ndarray) -> jnp.ndarray:
+    @jit
+    def __norm__(x: float, y: float) -> float:
+        return jnp.sqrt(jnp.add(jnp.square(x), jnp.square(y)))
+
+    x_coordinates = final_positions.at[:, :, 0].get()
+    x_coordinates_flat = x_coordinates.flatten()
+    y_coordinates = final_positions.at[:, :, 1].get()
+    y_coordinates_flat = y_coordinates.flatten()
+    distances_flat = vmap(__norm__, in_axes=(0, 0))(x_coordinates_flat, y_coordinates_flat)
+    distances = distances_flat.reshape(x_coordinates.shape)
+    return distances
