@@ -21,6 +21,10 @@ if __name__ == '__main__':
                 solver += "-local"
             env_name = wandb_run.config["problem"]["environment"]
             ea = "1+lambda" if wandb_run.config["n_parallel_runs"] > 1 else "mu+lambda"
+            if wandb_run.config.get("novelty") is not None:
+                ea += "-novelty"
+            if wandb_run.config.get("distance", False):
+                ea += "-distance"
             seed = wandb_run.config["seed"]
             run_name = f"{env_name}_{solver}_{ea}_{seed}"
             wandb_run.name = run_name
@@ -38,6 +42,12 @@ if __name__ == '__main__':
                 df["seed"] = df["training.run_id"] if wandb_run.config.get("n_parallel_runs", 0) > 1 else \
                     wandb_run.config[
                         "seed"]
+                df["training.evaluation"] = df["training.generation"] * wandb_run.config["n_individuals"]
+                for i in range(3):
+                    if f"training.top_k_reward.top_{i}_reward" not in df.columns:
+                        df[f"training.top_k_reward.top_{i}_reward"] = df[f"training.top_k_fit.top_{i}_fit"]
+
+                # top_k_reward
                 df.to_csv(f"data/fitness/{run_name}.csv")
 
             # download genomes
