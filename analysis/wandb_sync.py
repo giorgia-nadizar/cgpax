@@ -18,6 +18,8 @@ if __name__ == '__main__':
     for wandb_run in runs:
         if wandb_run.state == "finished":
             solver = wandb_run.config["solver"]
+            if solver == "cgp" and wandb_run.config["n_nodes"] > 50:
+                solver += "-large"
             if solver == "cgp" and wandb_run.config.get("levels_back") is not None:
                 solver += "-local"
             env_name = wandb_run.config["problem"]["environment"]
