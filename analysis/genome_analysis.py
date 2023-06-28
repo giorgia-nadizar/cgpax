@@ -1,4 +1,5 @@
 import os
+from typing import Tuple
 
 import jax.numpy as jnp
 from brax.v1 import envs
@@ -74,6 +75,21 @@ def __save_html_visualization__(genome: jnp.ndarray, config: dict, env: EpisodeW
     return reward
 
 
+def __load_last_genome__(base_path: str, seed: int) -> Tuple[jnp.ndarray, int]:
+    generation = 0
+    for gene_file in os.listdir(base_path):
+        if gene_file == "config.yaml":
+            continue
+        current_generation = int(gene_file.split("_")[1])
+        if current_generation > generation:
+            generation = current_generation
+    genes = jnp.load(f"{base_path}/{seed}_{generation}_best_genome.npy",
+                     allow_pickle=True).astype(int)
+    return genes, generation
+
+
+
+
 if __name__ == '__main__':
     analysis_config = cgpax.get_config("../configs/analysis.yaml")
     seed = analysis_config["seed"]
@@ -89,20 +105,9 @@ if __name__ == '__main__':
                 continue
 
             cfg = cgpax.get_config(f"{base_path}/config.yaml")
-            env_name = cfg["problem"]["environment"]
-            solver = cfg["solver"]
+            genes, generation = __load_last_genome__(base_path)
 
-            generation = 0
-            for gene_file in os.listdir(base_path):
-                if gene_file == "config.yaml":
-                    continue
-                current_generation = int(gene_file.split("_")[1])
-                if current_generation > generation:
-                    generation = current_generation
-            genes = jnp.load(f"{base_path}/{seed}_{generation}_best_genome.npy",
-                             allow_pickle=True).astype(int)
-
-            environment = envs.get_environment(env_name=env_name)
+            environment = envs.get_environment(env_name=cfg["problem"]["environment"])
             environment = EpisodeWrapper(environment, episode_length=cfg["problem"]["episode_length"], action_repeat=1)
             __update_config_with_env_data__(cfg, environment)
 
