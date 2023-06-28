@@ -38,7 +38,6 @@ def write_rewards_df(base_path: str, seed: int, generation: int, target_file: st
 
 
 if __name__ == '__main__':
-    outer_seed = 0
     main_target_dir = "data/rewards"
 
     for outer_seed in range(10):
@@ -52,10 +51,10 @@ if __name__ == '__main__':
             for inner_seed in range(10):
                 try:
                     genes, gen = __load_last_genome__(base_p, inner_seed)
-                    print(f"{folder} -> {inner_seed}")
                 except:
                     continue
 
-                target_f = f"data/rewards/{folder.replace(f'_{outer_seed}', f'_{inner_seed}')}_{gen}"
+                target_f = f"{folder.replace(f'_{outer_seed}', f'_{inner_seed}')}_{gen}.csv"
                 if target_f not in os.listdir("data/rewards"):
-                    write_rewards_df(base_p, outer_seed, gen, target_f, rand_key)
+                    print(f"{folder} -> {inner_seed}")
+                    write_rewards_df(base_p, outer_seed, gen, f"data/rewards/{target_f}", rand_key)
