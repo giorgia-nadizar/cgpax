@@ -24,6 +24,9 @@ if __name__ == '__main__':
                 solver += "-local"
             env_name = wandb_run.config["problem"]["environment"]
             ea = "1+lambda" if wandb_run.config["n_parallel_runs"] > 1 else "mu+lambda"
+            day, month = int(wandb_run.created_at[8:10]), int(wandb_run.created_at[5:7])
+            if day >= 29 or month > 6:
+                ea += "-ga"
             fitness = "reward"
             if wandb_run.config.get("novelty") is not None:
                 fitness = "novelty"
