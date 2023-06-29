@@ -39,8 +39,9 @@ def write_rewards_df(base_path: str, seed: int, generation: int, target_file: st
 
 if __name__ == '__main__':
     main_target_dir = "data/rewards"
+    max_seed = 10
 
-    for outer_seed in range(10):
+    for outer_seed in range(max_seed):
         for folder in os.listdir("genomes"):
             if not folder.endswith(f"_{outer_seed}"):
                 continue
@@ -48,13 +49,13 @@ if __name__ == '__main__':
             base_p = f"genomes/{folder}"
             rand_key = random.PRNGKey(outer_seed)
             cfg = cgpax.get_config(f"{base_p}/config.yaml")
-            for inner_seed in range(10):
+            for inner_seed in range(max_seed):
                 try:
                     genes, gen = __load_last_genome__(base_p, inner_seed)
-                except:
+                except FileNotFoundError:
                     continue
 
                 target_f = f"{folder.replace(f'_{outer_seed}', f'_{inner_seed}')}_{gen}.csv"
                 if target_f not in os.listdir("data/rewards"):
-                    print(f"{folder} -> {inner_seed}")
                     write_rewards_df(base_p, outer_seed, gen, f"data/rewards/{target_f}", rand_key)
+                    print(f"{folder} -> {inner_seed}")
