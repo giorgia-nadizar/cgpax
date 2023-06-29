@@ -88,8 +88,6 @@ def __load_last_genome__(base_path: str, seed: int) -> Tuple[jnp.ndarray, int]:
     return genes, generation
 
 
-
-
 if __name__ == '__main__':
     analysis_config = cgpax.get_config("../configs/analysis.yaml")
     seed = analysis_config["seed"]
@@ -100,12 +98,11 @@ if __name__ == '__main__':
             base_path = f"genomes/{folder}"
 
             target_dir = f"{analysis_config['target_dir']}"
-            print(target_dir)
             if f"{folder}.png" in os.listdir(target_dir):
                 continue
 
             cfg = cgpax.get_config(f"{base_path}/config.yaml")
-            genes, generation = __load_last_genome__(base_path)
+            genes, generation = __load_last_genome__(base_path, seed)
 
             environment = envs.get_environment(env_name=cfg["problem"]["environment"])
             environment = EpisodeWrapper(environment, episode_length=cfg["problem"]["episode_length"], action_repeat=1)
