@@ -23,10 +23,13 @@ def compute_rewards_df(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dic
     healthy = result["healthy_rewards"].tolist()
     ctrl = result["ctrl_rewards"].tolist()
     forward = result["forward_rewards"].tolist()
-    cum = result["cum_reward"]
+    total = result["total_rewards"].tolist()
 
-    df = pd.DataFrame(list(zip(healthy, ctrl, forward)), columns=["healthy", "ctrl", "forward"])
-    df["cumulative"] = cum
+    df = pd.DataFrame(list(zip(healthy, ctrl, forward, total)), columns=["healthy", "ctrl", "forward", "total"])
+    df["cumulative"] = result["cum_reward"]
+    df["cumulative_healthy"] = result["cum_healthy_reward"]
+    df["cumulative_ctrl"] = result["cum_ctrl_reward"]
+    df["cumulative_forward"] = result["cum_forward_reward"]
     return df
 
 
