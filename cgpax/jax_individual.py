@@ -36,7 +36,7 @@ def compute_lgp_mutation_prob_mask(config: dict) -> jnp.ndarray:
 
 def compute_cgp_genome_mask(config: dict, n_in: int, n_out: int) -> jnp.ndarray:
     n_nodes = config["n_nodes"]
-    if config["recursive"]:
+    if config.get("recursive", False):
         in_mask = (n_in + n_nodes) * jnp.ones(n_nodes)
     elif config.get("levels_back") is not None:
         in_mask = jnp.minimum(
