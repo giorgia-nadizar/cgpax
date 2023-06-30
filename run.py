@@ -15,7 +15,7 @@ from cgpax.jax_individual import generate_population
 from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_selection__, __compile_mutation__, \
     __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
-    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__
+    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__
 
 
 def run(config: dict, wandb_run: Run) -> None:
@@ -51,6 +51,7 @@ def run(config: dict, wandb_run: Run) -> None:
     # compilation of functions
     evaluate_genomes = __compile_genome_evaluation__(config, environment, config["problem"]["episode_length"])
     select_parents = __compile_parents_selection__(config)
+    crossover_genomes = __compile_crossover__(config)
     mutate_genomes = __compile_mutation__(config, genome_mask, mutation_mask, genome_transformation_function)
     replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
     replace_invalid_nan_zero = jit(partial(jnp.nan_to_num, nan=0))
@@ -120,7 +121,14 @@ def run(config: dict, wandb_run: Run) -> None:
         rnd_key, mutate_key = random.split(rnd_key, 2)
         mutate_keys = random.split(mutate_key, len(parents))
         start_offspring = time.process_time()
-        offspring_matrix = mutate_genomes(parents, mutate_keys)
+        if config.get("crossover", False):
+            parents1, parents2 = jnp.split(parents, 2)
+            rnd_key, *xover_keys = random.split(rnd_key, len(parents1) + 1)
+            offspring1, offspring2 = crossover_genomes(parents1, parents2, jnp.array(xover_keys))
+            new_parents = jnp.concatenate((offspring1, offspring2))
+        else:
+            new_parents = parents
+        offspring_matrix = mutate_genomes(new_parents, mutate_keys)
         offspring = jnp.reshape(offspring_matrix, (-1, offspring_matrix.shape[-1]))
         end_offspring = time.process_time()
         times["mutation_time"] = end_offspring - start_offspring

@@ -80,19 +80,15 @@ def lgp_one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray,
                                     rnd_key: random.PRNGKey) -> Tuple[jnp.ndarray, jnp.ndarray]:
     assert len(genome1) == len(genome2)
     rnd_key, xover_key = random.split(rnd_key, 2)
-    chunks1 = jnp.split(genome1, 4)
-    chunks2 = jnp.split(genome2, 4)
-    crossover_point = random.randint(xover_key, (1, 0), 0, int(len(genome1) / 4))
-    before = jnp.arange(0, crossover_point)
-    after = jnp.arange(crossover_point, int(len(genome1) / 4))
-    offspring1 = []
-    offspring2 = []
-    for chunk_idx in range(len(chunks1)):
-        offspring1.append(chunks1[chunk_idx].take(before))
-        offspring1.append(chunks2[chunk_idx].take(after))
-        offspring2.append(chunks2[chunk_idx].take(before))
-        offspring2.append(chunks1[chunk_idx].take(after))
-    return jnp.concatenate(offspring1), jnp.concatenate(offspring2)
+    chunk_size = int(len(genome1) / 4)
+    crossover_point = random.randint(xover_key, [1], 0, chunk_size)
+    ids = jnp.arange(len(genome1))
+    mask1 = (ids < crossover_point) \
+            | ((ids >= chunk_size) & (ids < chunk_size + crossover_point)) \
+            | ((ids >= 2 * chunk_size) & (ids < 2 * chunk_size + crossover_point)) \
+            | ((ids >= 3 * chunk_size) & (ids < 3 * chunk_size + crossover_point))
+    mask2 = jnp.invert(mask1)
+    return jnp.where(mask1, genome1, genome2), jnp.where(mask2, genome1, genome2)
 
 
 def one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray,
