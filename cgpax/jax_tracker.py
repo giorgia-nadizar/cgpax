@@ -1,3 +1,5 @@
+from typing import Dict
+
 import jax.numpy as jnp
 from jax import jit
 import chex
@@ -22,6 +24,9 @@ class Tracker:
                 # Fitness of the top k individuals during training (ordered)
                 "top_k_fit": jnp.zeros((self.config["n_generations"], self.top_k)),
                 "top_k_reward": jnp.zeros((self.config["n_generations"], self.top_k)),
+                "top_k_healthy_reward": jnp.zeros((self.config["n_generations"], self.top_k)),
+                "top_k_ctrl_reward": jnp.zeros((self.config["n_generations"], self.top_k)),
+                "top_k_forward_reward": jnp.zeros((self.config["n_generations"], self.top_k)),
                 "fitness_mean": jnp.zeros((self.config["n_generations"],)),
                 "fitness_std": jnp.zeros((self.config["n_generations"],)),
                 "fitness_median": jnp.zeros((self.config["n_generations"],)),
@@ -39,21 +44,28 @@ class Tracker:
         }
 
     @partial(jit, static_argnums=(0,))
-    def update(self, tracker_state: chex.ArrayTree, fitness: chex.Array, rewards: chex.Array,
+    def update(self, tracker_state: chex.ArrayTree, fitness: chex.Array, rewards: chex.Array, detailed_rewards: Dict,
                best_individual: chex.Array, times: dict) -> chex.ArrayTree:
         i = tracker_state["generation"]
         # [Training] - update top_k_fitness using old state (carry best over)
-        # last_fit = (tracker_state["training"]["top_k_fit"].at[i - 1].get(mode="fill", fill_value=0.0))
-        # top_k_f = jnp.sort(jnp.hstack((fitness, last_fit)))[::-1][: self.top_k]
-        # TODO -> choose what makes most sense
+
         # without carrying the old state
         top_k_ids, _ = jnp.split(jnp.argsort(-fitness), [self.top_k])
         top_k_f = jnp.take(fitness, top_k_ids)
         top_k_r = jnp.take(rewards, top_k_ids)
+        top_k_r_healthy = jnp.take(detailed_rewards["healthy"], top_k_ids)
+        top_k_r_ctrl = jnp.take(detailed_rewards["ctrl"], top_k_ids)
+        top_k_r_forward = jnp.take(detailed_rewards["forward"], top_k_ids)
 
         # NOTE - Update top k fitness and reward values
         tracker_state["training"]["top_k_fit"] = (tracker_state["training"]["top_k_fit"].at[i].set(top_k_f))
         tracker_state["training"]["top_k_reward"] = (tracker_state["training"]["top_k_reward"].at[i].set(top_k_r))
+        tracker_state["training"]["top_k_healthy_reward"] = (
+            tracker_state["training"]["top_k_healthy_reward"].at[i].set(top_k_r_healthy))
+        tracker_state["training"]["top_k_ctrl_reward"] = (
+            tracker_state["training"]["top_k_ctrl_reward"].at[i].set(top_k_r_ctrl))
+        tracker_state["training"]["top_k_forward_reward"] = (
+            tracker_state["training"]["top_k_forward_reward"].at[i].set(top_k_r_forward))
 
         # NOTE - Update fitness statistics
         tracker_state["training"]["fitness_mean"] = (
@@ -107,6 +119,17 @@ class Tracker:
                     f"top_k_reward": {
                         f"top_{t}_reward": float(tracker_state["training"]["top_k_reward"][gen][t]) for t in
                         range(self.top_k)
+                    },
+                    f"top_k_healthy_reward": {
+                        f"top_{t}_healthy_reward": float(tracker_state["training"]["top_k_healthy_reward"][gen][t]) for
+                        t in range(self.top_k)
+                    },
+                    f"top_k_ctrl_reward": {
+                        f"top_{t}_ctrl_reward": float(tracker_state["training"]["top_k_ctrl_reward"][gen][t]) for t in
+                        range(self.top_k)},
+                    f"top_k_forward_reward": {
+                        f"top_{t}_forward_reward": float(tracker_state["training"]["top_k_forward_reward"][gen][t]) for
+                        t in range(self.top_k)
                     },
                     "fitness_mean": float(tracker_state["training"]["fitness_mean"][gen]),
                     "fitness_std": float(tracker_state["training"]["fitness_std"][gen]),
