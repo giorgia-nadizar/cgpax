@@ -89,12 +89,12 @@ def __compile_genome_evaluation__(config: Dict, env: Union[QDEnv, EpisodeWrapper
     return jit(vmap_evaluate_genome)
 
 
-def __compile_crossover__(config: Dict) -> Callable:
+def __compile_crossover__(config: Dict) -> Union[Callable, None]:
     if config.get("crossover", False) and config["solver"] == "lgp":
         vmap_crossover = vmap(lgp_one_point_crossover_genomes, in_axes=(0, 0, 0))
         return jit(vmap_crossover)
     else:
-        return identity
+        return None
 
 
 def __compile_mutation__(config: Dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
