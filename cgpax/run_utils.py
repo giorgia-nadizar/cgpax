@@ -5,7 +5,7 @@ from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
 from wandb.apis.public import Run
 
-from environments.locomotion_wrappers import XYPositionWrapper
+from qdax.environments.locomotion_wrappers import QDEnv, FeetContactWrapper
 from jax import vmap, jit, random
 import jax.numpy as jnp
 
@@ -13,24 +13,26 @@ from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_time
     evaluate_lgp_genome_n_times
 from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
     compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask, \
-    levels_back_transformation_function
+    levels_back_transformation_function, lgp_one_point_crossover_genomes
 from cgpax.jax_selection import truncation_selection, tournament_selection, fp_selection, composed_selection
 from cgpax.jax_tracker import Tracker
 from cgpax.utils import identity
 
 
-def __init_environment__(env_name: str, episode_length: int) -> XYPositionWrapper:
-    env = envs.get_environment(env_name=env_name)
+def __init_environment__(env_name: str, episode_length: int,
+                         terminate_when_unhealthy: bool = True) -> Union[QDEnv, EpisodeWrapper]:
+    env = envs.get_environment(env_name=env_name, terminate_when_unhealthy=terminate_when_unhealthy)
     env = EpisodeWrapper(env, episode_length=episode_length, action_repeat=1)
-    env = XYPositionWrapper(env=env, env_name=env_name)
+    # env = FeetContactWrapper(env=env, env_name=env_name)
     return env
 
 
-def __init_environment_from_config__(config: dict) -> XYPositionWrapper:
-    return __init_environment__(config["problem"]["environment"], config["problem"]["episode_length"])
+def __init_environment_from_config__(config: Dict) -> Union[QDEnv, EpisodeWrapper]:
+    return __init_environment__(config["problem"]["environment"], config["problem"]["episode_length"],
+                                config.get("unhealthy_termination", True))
 
 
-def __init_environments__(config: dict) -> List[Dict]:
+def __init_environments__(config: Dict) -> List[Dict]:
     n_steps = config["problem"]["incremental_steps"]
     min_duration = config["problem"]["min_length"]
     step_size = (config["problem"]["episode_length"] - min_duration) / (n_steps - 1)
@@ -48,7 +50,7 @@ def __init_environments__(config: dict) -> List[Dict]:
     ]
 
 
-def __update_config_with_env_data__(config: dict, env) -> None:
+def __update_config_with_env_data__(config: Dict, env) -> None:
     config["n_in"] = env.observation_size
     config["n_out"] = env.action_size
     if config["solver"] == "cgp":
@@ -73,7 +75,7 @@ def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, 
     return indexes.astype(int)
 
 
-def __compile_genome_evaluation__(config: dict, env: XYPositionWrapper, episode_length: int) -> Callable:
+def __compile_genome_evaluation__(config: Dict, env: Union[QDEnv, EpisodeWrapper], episode_length: int) -> Callable:
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
     else:
@@ -87,10 +89,17 @@ def __compile_genome_evaluation__(config: dict, env: XYPositionWrapper, episode_
     return jit(vmap_evaluate_genome)
 
 
-def __compile_mutation__(config: dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
-                         genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray]) -> Callable:
-    n_mutations_per_individual = int(
-        (config["n_individuals"] - config["selection"]["elite_size"]) / config["selection"]["elite_size"])
+def __compile_crossover__(config: Dict) -> Callable:
+    if config.get("crossover", False) and config["solver"] == "lgp":
+        vmap_crossover = vmap(lgp_one_point_crossover_genomes, in_axes=(0, 0, 0))
+        return jit(vmap_crossover)
+    else:
+        return identity
+
+
+def __compile_mutation__(config: Dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
+                         genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray],
+                         n_mutations_per_individual: int = 1) -> Callable:
     if config["mutation"] == "standard":
         partial_multiple_mutations = partial(mutate_genome_n_times, n_mutations=n_mutations_per_individual,
                                              genome_mask=genome_mask, mutation_mask=mutation_mask,
@@ -103,7 +112,7 @@ def __compile_mutation__(config: dict, genome_mask: jnp.ndarray, mutation_mask: 
     return jit(vmap_multiple_mutations)
 
 
-def __compile_survival_selection__(config: dict) -> Union[Callable, None]:
+def __compile_survival_selection__(config: Dict) -> Union[Callable, None]:
     if config["survival"] == "parents":
         return None
     elif config["survival"] == "truncation":
@@ -115,14 +124,16 @@ def __compile_survival_selection__(config: dict) -> Union[Callable, None]:
         return jit(partial(fp_selection, n_elites=config["selection"]["elite_size"]))
 
 
-def __compile_parents_selection__(config: dict) -> Callable:
+def __compile_parents_selection__(config: Dict, n_parents: int = 0) -> Callable:
+    if n_parents == 0:
+        n_parents = config["n_individuals"] - config["selection"]["elite_size"]
     if config["selection"]["type"] == "truncation":
-        partial_selection = partial(truncation_selection, n_elites=config["selection"]["elite_size"])
+        partial_selection = partial(truncation_selection, n_elites=n_parents)
     elif config["selection"]["type"] == "tournament":
-        partial_selection = partial(tournament_selection, n_elites=config["selection"]["elite_size"],
+        partial_selection = partial(tournament_selection, n_elites=n_parents,
                                     tour_size=config["selection"]["tour_size"])
     else:
-        partial_selection = partial(fp_selection, n_elites=config["selection"]["elite_size"])
+        partial_selection = partial(fp_selection, n_elites=n_parents)
     inner_selection = jit(partial_selection)
     if config.get("n_parallel_runs", 1) == 1:
         return inner_selection
@@ -139,7 +150,7 @@ def __compile_parents_selection__(config: dict) -> Callable:
         return composite_selection
 
 
-def __compute_masks__(config: dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
+def __compute_masks__(config: Dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
     if config["solver"] == "cgp":
         genome_mask = compute_cgp_genome_mask(config, config["n_in"], config["n_out"])
         mutation_mask = compute_cgp_mutation_prob_mask(config, config["n_out"])
@@ -149,14 +160,14 @@ def __compute_masks__(config: dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
     return genome_mask, mutation_mask
 
 
-def __compute_genome_transformation_function__(config: dict) -> Callable[[jnp.ndarray], jnp.ndarray]:
+def __compute_genome_transformation_function__(config: Dict) -> Callable[[jnp.ndarray], jnp.ndarray]:
     if config["solver"] == "cgp" and config.get("levels_back") is not None:
         return levels_back_transformation_function(config["n_in"], config["n_nodes"])
     else:
         return identity
 
 
-def __init_tracking__(config: dict) -> Tuple:
+def __init_tracking__(config: Dict) -> Tuple:
     if config.get("n_parallel_runs", 1) > 1:
         trackers = [Tracker(config, idx=k) for k in range(config["n_parallel_runs"])]
         tracker_states = [t.init() for t in trackers]
@@ -167,14 +178,15 @@ def __init_tracking__(config: dict) -> Tuple:
         return tracker, tracker_state
 
 
-def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
-                        rewards: jnp.ndarray, times: dict, wdb_run: Run) -> Tuple:
+def __update_tracking__(config: Dict, tracking_objects: Tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
+                        rewards: jnp.ndarray, detailed_rewards: Dict, times: Dict, wdb_run: Run) -> Tuple:
     if config.get("n_parallel_runs", 1) == 1:
         tracker, tracker_state = tracking_objects
         tracker_state = tracker.update(
             tracker_state=tracker_state,
             fitness=fitness_values,
             rewards=rewards,
+            detailed_rewards=detailed_rewards,
             best_individual=genomes.at[jnp.argmax(fitness_values)].get(),
             times=times
         )
@@ -191,6 +203,7 @@ def __update_tracking__(config: dict, tracking_objects: tuple, genomes: jnp.ndar
                 tracker_state=tracker_states[run_idx],
                 fitness=sub_fitness,
                 rewards=sub_rewards,
+                detailed_rewards=detailed_rewards,
                 best_individual=sub_genomes.at[jnp.argmax(sub_fitness)].get(),
                 times=times
             )
@@ -224,17 +237,3 @@ def __compute_novelty_scores__(final_positions: jnp.ndarray, novelty_archive: Se
     for pos in rounded_positions[~jnp.isnan(rounded_positions)]:
         novelty_archive.add(float(pos))
     return max_distances
-
-
-def __compute_distance_run__(final_positions: jnp.ndarray) -> jnp.ndarray:
-    @jit
-    def __norm__(x: float, y: float) -> float:
-        return jnp.sqrt(jnp.add(jnp.square(x), jnp.square(y)))
-
-    x_coordinates = final_positions.at[:, :, 0].get()
-    x_coordinates_flat = x_coordinates.flatten()
-    y_coordinates = final_positions.at[:, :, 1].get()
-    y_coordinates_flat = y_coordinates.flatten()
-    distances_flat = vmap(__norm__, in_axes=(0, 0))(x_coordinates_flat, y_coordinates_flat)
-    distances = distances_flat.reshape(x_coordinates.shape)
-    return distances
