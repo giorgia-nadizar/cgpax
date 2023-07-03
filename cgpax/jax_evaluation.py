@@ -3,8 +3,8 @@ from typing import Callable, Dict, Tuple, Any, Union
 
 from brax.v1.envs.wrappers import EpisodeWrapper
 
-from qdax.core.buffer import QDTransition, Transition
-from qdax.environments import get_feet_contact_proportion
+# from qdax.core.buffer import QDTransition, Transition
+# from qdax.environments import get_feet_contact_proportion
 from qdax.environments.locomotion_wrappers import QDEnv
 
 from cgpax.jax_encoding import genome_to_cgp_program, genome_to_lgp_program
