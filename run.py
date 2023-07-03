@@ -1,4 +1,4 @@
-import time, signal
+import time
 
 from wandb.sdk.wandb_run import Run
 
@@ -16,10 +16,6 @@ from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_s
     __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
     __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__
-
-
-def handle_timeout(signum, frame):
-    raise TimeoutError
 
 
 def run(config: dict, wandb_run: Run) -> None:
@@ -70,7 +66,6 @@ def run(config: dict, wandb_run: Run) -> None:
                                   genome_transformation_function=genome_transformation_function)
 
     times = {}
-    evaluation_outcomes = None
     # evolutionary loop
     for _generation in range(config["n_generations"]):
         # check if env needs update
@@ -84,18 +79,7 @@ def run(config: dict, wandb_run: Run) -> None:
         # evaluate population
         rnd_key, *eval_keys = random.split(rnd_key, len(genomes) + 1)
         start_eval = time.process_time()
-
-        signal.signal(signal.SIGALRM, handle_timeout)
-        signal.alarm(30)  # 30 seconds
-
-        try:
-            new_evaluation_outcomes = evaluate_genomes(genomes, jnp.array(eval_keys))
-            evaluation_outcomes = new_evaluation_outcomes
-        except TimeoutError:
-            print(f"Took too long at gen {_generation}")
-        finally:
-            signal.alarm(0)
-
+        evaluation_outcomes = evaluate_genomes(genomes, jnp.array(eval_keys))
         reward_values = replace_invalid_nan_reward(evaluation_outcomes["cum_reward"]) * fitness_scaler
         detailed_rewards = {
             "healthy": evaluation_outcomes["cum_healthy_reward"],
