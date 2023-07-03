@@ -8,6 +8,7 @@ n_individuals: 100
 n_nodes: 50
 n_parallel_runs: 1
 nan_replacement: -100000.0
+distance: true
 p_mut_functions: 0.1
 p_mut_inputs: 0.1
 p_mut_outputs: 0.3

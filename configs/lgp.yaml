@@ -4,9 +4,9 @@ mutation: standard
 n_evals_per_individual: 5
 n_extra_registers: 5
 n_functions: 9
-n_generations: 5000
-n_individuals: 10
-n_parallel_runs: 10
+n_generations: 1000
+n_individuals: 100
+n_parallel_runs: 1
 n_rows: 15
 nan_replacement: -100000.0
 p_mut_functions: 0.1
@@ -20,7 +20,8 @@ problem:
 recursive: false
 seed: 0
 selection:
-  elite_size: 1
-  type: truncation
+  elite_size: 20
+  tour_size: 5
+  type: tournament
 solver: lgp
-survival: parents
+survival: truncation
