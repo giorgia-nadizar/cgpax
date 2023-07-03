@@ -16,57 +16,32 @@ from jax import numpy as jnp
 from qdax.types import EnvState
 
 
-def __evaluate_genome_n_times__(evaluation_function: Callable, genome: jnp.ndarray, rnd_key: random.PRNGKey,
-                                config: dict, env: Union[QDEnv, EpisodeWrapper], n_times: int,
-                                episode_length: int = 1000) -> Dict:
-    rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
-    subkeys_array = jnp.array(subkeys)
-    partial_evaluate_genome = partial(evaluation_function, config=config, env=env, episode_length=episode_length)
-    vmap_evaluate_genome = vmap(partial_evaluate_genome, in_axes=(None, 0))
-    return vmap_evaluate_genome(genome, subkeys_array)
-
-
-def evaluate_cgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict,
-                                env: Union[QDEnv, EpisodeWrapper], n_times: int, episode_length: int = 1000) -> Dict:
-    return __evaluate_genome_n_times__(evaluate_cgp_genome, genome, rnd_key, config, env, n_times, episode_length)
-
-
-def evaluate_lgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict,
-                                env: Union[QDEnv, EpisodeWrapper], n_times: int, episode_length: int = 1000) -> Dict:
-    return __evaluate_genome_n_times__(evaluate_lgp_genome, genome, rnd_key, config, env, n_times, episode_length)
-
-
 def __evaluate_program__(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
                          env: Union[QDEnv, EpisodeWrapper], episode_length: int = 1000) -> Dict:
     initial_env_state = jit(env.reset)(rnd_key)
-    initial_rewards_carry = (
-        jnp.zeros(episode_length), jnp.zeros(episode_length), jnp.zeros(episode_length), jnp.zeros(episode_length), 0)
+    initial_rewards_carry = (0, 0, 0)
 
     def rollout_loop(
             carry: Tuple[
-                EnvState, jnp.ndarray, float, Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int], int],
-            unused_arg: Any) -> Tuple[
-        Tuple[
-            EnvState, jnp.ndarray, float, Tuple[
-                jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int], int], Transition]:
+                EnvState, jnp.ndarray, float, Tuple[int, int, int], int],
+            unused_arg: Any) -> Tuple[Tuple[EnvState, jnp.ndarray, float, Tuple[int, int, int], int], Any]:
         env_state, program_state, cum_reward, rew_carry, active_episode = carry
-        rew_forward, rew_ctrl, rew_healthy, rew_tot, i = rew_carry
+        rew_forward, rew_ctrl, rew_healthy = rew_carry
         inputs = env_state.obs
         new_program_state, actions = program(inputs, program_state)
         new_state = jit(env.step)(env_state, actions)
         new_active_episode = active_episode * (1 - new_state.done)
         corrected_reward = new_state.reward * new_active_episode
-        rew_forward = rew_forward.at[i].set(
-            new_state.metrics.get("reward_forward", new_state.metrics.get("reward_run", 0)) * new_active_episode)
-        rew_ctrl = rew_ctrl.at[i].set(new_state.metrics.get("reward_ctrl", 0) * new_active_episode)
-        rew_healthy = rew_healthy.at[i].set(
-            new_state.metrics.get("reward_healthy", new_state.metrics.get("reward_survive", 0)) * new_active_episode)
-        rew_tot = rew_tot.at[i].set(new_state.reward * new_active_episode)
-        new_rew_carry = rew_forward, rew_ctrl, rew_healthy, rew_tot, i + 1
+        rew_forward += new_state.metrics.get("reward_forward",
+                                             new_state.metrics.get("reward_run", 0)) * new_active_episode
+        rew_ctrl += new_state.metrics.get("reward_ctrl", 0) * new_active_episode
+        rew_healthy += new_state.metrics.get("reward_healthy",
+                                             new_state.metrics.get("reward_survive", 0)) * new_active_episode
+        new_rew_carry = rew_forward, rew_ctrl, rew_healthy
         new_carry = new_state, new_program_state, cum_reward + corrected_reward, new_rew_carry, new_active_episode
         return new_carry, corrected_reward
 
-    (final_env_state, _, cum_reward, (rs_forward, rs_ctrl, rs_healthy, rs_total, _), _), transitions = lax.scan(
+    (final_env_state, _, cum_reward, (rs_forward, rs_ctrl, rs_healthy), _), _ = lax.scan(
         f=rollout_loop,
         init=(initial_env_state, jnp.zeros(program_state_size), initial_env_state.reward, initial_rewards_carry, 1),
         xs=(),
@@ -77,15 +52,64 @@ def __evaluate_program__(program: Callable, program_state_size: int, rnd_key: ra
 
     return {
         "cum_reward": cum_reward,
-        "cum_healthy_reward": jnp.sum(rs_healthy),
-        "cum_ctrl_reward": jnp.sum(rs_ctrl),
-        "cum_forward_reward": jnp.sum(rs_forward),
-        "healthy_rewards": rs_healthy,
-        "ctrl_rewards": rs_ctrl,
-        "forward_rewards": rs_forward,
-        "total_rewards": rs_total,
+        "cum_healthy_reward": rs_healthy,
+        "cum_ctrl_reward": rs_ctrl,
+        "cum_forward_reward": rs_forward,
         "x_distance": x_distance,
     }
+
+
+# TODO remove comment for rewards analysis
+# def __evaluate_program_detailed_tracking__(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
+#                                            env: Union[QDEnv, EpisodeWrapper], episode_length: int = 1000) -> Dict:
+#     initial_env_state = jit(env.reset)(rnd_key)
+#     initial_rewards_carry = (
+#         jnp.zeros(episode_length), jnp.zeros(episode_length), jnp.zeros(episode_length), jnp.zeros(episode_length), 0)
+#
+#     def rollout_loop(
+#             carry: Tuple[
+#                 EnvState, jnp.ndarray, float, Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int], int],
+#             unused_arg: Any) -> Tuple[
+#         Tuple[
+#             EnvState, jnp.ndarray, float, Tuple[
+#                 jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int], int], Transition]:
+#         env_state, program_state, cum_reward, rew_carry, active_episode = carry
+#         rew_forward, rew_ctrl, rew_healthy, rew_tot, i = rew_carry
+#         inputs = env_state.obs
+#         new_program_state, actions = program(inputs, program_state)
+#         new_state = jit(env.step)(env_state, actions)
+#         new_active_episode = active_episode * (1 - new_state.done)
+#         corrected_reward = new_state.reward * new_active_episode
+#         rew_forward = rew_forward.at[i].set(
+#             new_state.metrics.get("reward_forward", new_state.metrics.get("reward_run", 0)) * new_active_episode)
+#         rew_ctrl = rew_ctrl.at[i].set(new_state.metrics.get("reward_ctrl", 0) * new_active_episode)
+#         rew_healthy = rew_healthy.at[i].set(
+#             new_state.metrics.get("reward_healthy", new_state.metrics.get("reward_survive", 0)) * new_active_episode)
+#         rew_tot = rew_tot.at[i].set(new_state.reward * new_active_episode)
+#         new_rew_carry = rew_forward, rew_ctrl, rew_healthy, rew_tot, i + 1
+#         new_carry = new_state, new_program_state, cum_reward + corrected_reward, new_rew_carry, new_active_episode
+#         return new_carry, corrected_reward
+#
+#     (final_env_state, _, cum_reward, (rs_forward, rs_ctrl, rs_healthy, rs_total, _), _), transitions = lax.scan(
+#         f=rollout_loop,
+#         init=(initial_env_state, jnp.zeros(program_state_size), initial_env_state.reward, initial_rewards_carry, 1),
+#         xs=(),
+#         length=episode_length,
+#     )
+#
+#     x_distance = final_env_state.metrics.get("x_position", 0) - initial_env_state.metrics.get("x_position", 0)
+#
+#     return {
+#         "cum_reward": cum_reward,
+#         "cum_healthy_reward": jnp.sum(rs_healthy),
+#         "cum_ctrl_reward": jnp.sum(rs_ctrl),
+#         "cum_forward_reward": jnp.sum(rs_forward),
+#         "healthy_rewards": rs_healthy,
+#         "ctrl_rewards": rs_ctrl,
+#         "forward_rewards": rs_forward,
+#         "total_rewards": rs_total,
+#         "x_distance": x_distance,
+#     }
 
 # TODO explore QD tracking
 # def __evaluate_program__(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
@@ -129,16 +153,41 @@ def __evaluate_program__(program: Callable, program_state_size: int, rnd_key: ra
 #     }
 
 
+def __evaluate_genome_n_times__(evaluation_function: Callable, genome: jnp.ndarray, rnd_key: random.PRNGKey,
+                                config: dict, env: Union[QDEnv, EpisodeWrapper], n_times: int,
+                                episode_length: int = 1000, inner_evaluator: Callable = __evaluate_program__) -> Dict:
+    rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
+    subkeys_array = jnp.array(subkeys)
+    partial_evaluate_genome = partial(evaluation_function, config=config, env=env, episode_length=episode_length,
+                                      inner_evaluator=inner_evaluator)
+    vmap_evaluate_genome = vmap(partial_evaluate_genome, in_axes=(None, 0))
+    return vmap_evaluate_genome(genome, subkeys_array)
+
+
+def evaluate_cgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict,
+                                env: Union[QDEnv, EpisodeWrapper], n_times: int, episode_length: int = 1000,
+                                inner_evaluator: Callable = __evaluate_program__) -> Dict:
+    return __evaluate_genome_n_times__(evaluate_cgp_genome, genome, rnd_key, config, env, n_times, episode_length,
+                                       inner_evaluator=inner_evaluator)
+
+
+def evaluate_lgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict,
+                                env: Union[QDEnv, EpisodeWrapper], n_times: int, episode_length: int = 1000,
+                                inner_evaluator: Callable = __evaluate_program__) -> Dict:
+    return __evaluate_genome_n_times__(evaluate_lgp_genome, genome, rnd_key, config, env, n_times, episode_length,
+                                       inner_evaluator=inner_evaluator)
+
+
 def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: Union[QDEnv, EpisodeWrapper],
-                        episode_length: int = 1000) -> Dict:
-    return __evaluate_program__(genome_to_cgp_program(genome, config), config["buffer_size"], rnd_key, env,
-                                episode_length)
+                        episode_length: int = 1000, inner_evaluator: Callable = __evaluate_program__) -> Dict:
+    return inner_evaluator(genome_to_cgp_program(genome, config), config["buffer_size"], rnd_key, env,
+                           episode_length)
 
 
 def evaluate_lgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: Union[QDEnv, EpisodeWrapper],
-                        episode_length: int = 1000) -> Dict:
-    return __evaluate_program__(genome_to_lgp_program(genome, config), config["n_registers"], rnd_key, env,
-                                episode_length)
+                        episode_length: int = 1000, inner_evaluator: Callable = __evaluate_program__) -> Dict:
+    return inner_evaluator(genome_to_lgp_program(genome, config), config["n_registers"], rnd_key, env,
+                           episode_length)
 
 
 def evaluate_cgp_genome_regression(genome: jnp.ndarray, config: dict, observations: jnp.ndarray,
