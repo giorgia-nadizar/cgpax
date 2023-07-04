@@ -1,4 +1,5 @@
 import time
+from typing import Dict
 
 from wandb.sdk.wandb_run import Run
 
@@ -18,7 +19,7 @@ from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_s
     __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__
 
 
-def run(config: dict, wandb_run: Run) -> None:
+def run(config: Dict, wandb_run: Run) -> None:
     rnd_key = random.PRNGKey(config["seed"])
 
     novelty_archive, alpha = None, 0

@@ -5,7 +5,6 @@ from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
 from wandb.apis.public import Run
 
-from qdax.environments.locomotion_wrappers import QDEnv, FeetContactWrapper
 from jax import vmap, jit, random
 import jax.numpy as jnp
 
@@ -19,15 +18,13 @@ from cgpax.jax_tracker import Tracker
 from cgpax.utils import identity
 
 
-def __init_environment__(env_name: str, episode_length: int,
-                         terminate_when_unhealthy: bool = True) -> Union[QDEnv, EpisodeWrapper]:
+def __init_environment__(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> EpisodeWrapper:
     env = envs.get_environment(env_name=env_name, terminate_when_unhealthy=terminate_when_unhealthy)
     env = EpisodeWrapper(env, episode_length=episode_length, action_repeat=1)
-    # env = FeetContactWrapper(env=env, env_name=env_name)
     return env
 
 
-def __init_environment_from_config__(config: Dict) -> Union[QDEnv, EpisodeWrapper]:
+def __init_environment_from_config__(config: Dict) -> EpisodeWrapper:
     return __init_environment__(config["problem"]["environment"], config["problem"]["episode_length"],
                                 config.get("unhealthy_termination", True))
 
@@ -75,7 +72,7 @@ def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, 
     return indexes.astype(int)
 
 
-def __compile_genome_evaluation__(config: Dict, env: Union[QDEnv, EpisodeWrapper], episode_length: int) -> Callable:
+def __compile_genome_evaluation__(config: Dict, env: EpisodeWrapper, episode_length: int) -> Callable:
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
     else:
