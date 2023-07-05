@@ -19,7 +19,10 @@ from cgpax.utils import identity
 
 
 def __init_environment__(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> EpisodeWrapper:
-    env = envs.get_environment(env_name=env_name, terminate_when_unhealthy=terminate_when_unhealthy)
+    try:
+        env = envs.get_environment(env_name=env_name, terminate_when_unhealthy=terminate_when_unhealthy)
+    except TypeError:
+        env = envs.get_environment(env_name=env_name)
     env = EpisodeWrapper(env, episode_length=episode_length, action_repeat=1)
     return env
 
