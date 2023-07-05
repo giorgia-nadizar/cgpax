@@ -30,6 +30,10 @@ if __name__ == '__main__':
                 fitness = "novelty"
             if wandb_run.config.get("distance", False):
                 fitness = "distance"
+            if wandb_run.config.get("weighted_rewards", None) is not None:
+                weights = wandb_run.config["weighted_rewards"]
+                healthy_w, ctrl_w, forward_w = weights["healthy"], weights["ctrl"], weights["forward"]
+                fitness = f"weighted-{healthy_w}-{ctrl_w}-{forward_w}"
             if day >= 30 or month > 6:
                 ea += "-ga"
                 if wandb_run.config.get("unhealthy_termination", True):
