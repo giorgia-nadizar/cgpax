@@ -25,17 +25,17 @@ if __name__ == '__main__':
             env_name = wandb_run.config["problem"]["environment"]
             ea = "1+lambda" if wandb_run.config["n_parallel_runs"] > 1 else "mu+lambda"
             day, month = int(wandb_run.created_at[8:10]), int(wandb_run.created_at[5:7])
-            if day >= 30 or month > 6:
-                ea += "-ga"
             fitness = "reward"
             if wandb_run.config.get("novelty") is not None:
                 fitness = "novelty"
             if wandb_run.config.get("distance", False):
                 fitness = "distance"
-            if wandb_run.config.get("unhealthy_termination", True):
-                fitness += "unhealthy_termination"
-            else:
-                fitness += "no_termination"
+            if day >= 30 or month > 6:
+                ea += "-ga"
+                if wandb_run.config.get("unhealthy_termination", True):
+                    fitness += "-unhealthy_termination"
+                else:
+                    fitness += "-no_termination"
             seed = wandb_run.config["seed"]
             run_name = f"{env_name}_{solver}_{ea}_{fitness}_{seed}"
             wandb_run.name = run_name
