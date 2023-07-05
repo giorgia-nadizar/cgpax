@@ -7,17 +7,18 @@ from jax import random
 
 import cgpax
 from analysis.genome_analysis import __load_last_genome__
-from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
+from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_lgp_genome, __evaluate_program_detailed_tracking__
 from cgpax.run_utils import __init_environment_from_config__, __update_config_with_env_data__
 
 
 def compute_rewards_df(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict) -> pd.DataFrame:
     env = __init_environment_from_config__(config)
     __update_config_with_env_data__(config, env)
+    inner_evaluator = __evaluate_program_detailed_tracking__
     if config["solver"] == "cgp":
-        result = evaluate_cgp_genome(genome, rnd_key, config, env)
+        result = evaluate_cgp_genome(genome, rnd_key, config, env, inner_evaluator=inner_evaluator)
     elif config["solver"] == "lgp":
-        result = evaluate_lgp_genome(genome, rnd_key, config, env)
+        result = evaluate_lgp_genome(genome, rnd_key, config, env, inner_evaluator=inner_evaluator)
     else:
         raise ValueError
     healthy = result["healthy_rewards"].tolist()
