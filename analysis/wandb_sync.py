@@ -32,6 +32,10 @@ if __name__ == '__main__':
                 fitness = "novelty"
             if wandb_run.config.get("distance", False):
                 fitness = "distance"
+            if wandb_run.config.get("unhealthy_termination", True):
+                fitness += "unhealthy_termination"
+            else:
+                fitness += "no_termination"
             seed = wandb_run.config["seed"]
             run_name = f"{env_name}_{solver}_{ea}_{fitness}_{seed}"
             wandb_run.name = run_name

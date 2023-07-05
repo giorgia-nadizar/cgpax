@@ -167,3 +167,44 @@ def evaluate_cgp_genome_regression(genome: jnp.ndarray, config: dict, observatio
     total_delta = jnp.sum(delta_squared)
     mse = total_delta / targets.size
     return jnp.sqrt(mse)
+
+# TODO explore QD tracking
+# def __evaluate_program__(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
+#                          env: EpisodeWrapper, episode_length: int = 1000) -> Dict:
+#     initial_env_state = jit(env.reset)(rnd_key)
+#
+#     def rollout_loop(carry: Tuple[State, jnp.ndarray, float],
+#                      unused_arg: Any) -> Tuple[Tuple[State, jnp.ndarray, float], Transition]:
+#         env_state, program_state, cum_reward = carry
+#         inputs = env_state.obs
+#         new_program_state, actions = program(inputs, program_state)
+#         new_state = jit(env.step)(env_state, actions)
+#         corrected_reward = new_state.reward * (1 - new_state.done)
+#         # transition = QDTransition(
+#         #     obs=env_state.obs,
+#         #     next_obs=new_state.obs,
+#         #     rewards=new_state.reward,
+#         #     dones=new_state.done,
+#         #     actions=actions,
+#         #     truncations=new_state.info["truncation"],
+#         #     state_desc=env_state.info["state_descriptor"],
+#         #     next_state_desc=new_state.info["state_descriptor"],
+#         # )
+#         new_carry = new_state, new_program_state, cum_reward + corrected_reward
+#         # return new_carry, transition
+#         return new_carry, corrected_reward
+#
+#     (final_env_state, _, cum_reward), transitions = lax.scan(
+#         f=rollout_loop,
+#         init=(initial_env_state, jnp.zeros(program_state_size), initial_env_state.reward),
+#         xs=(),
+#         length=episode_length,
+#     )
+#
+#     x_distance = final_env_state.metrics.get("x_position", 0) - initial_env_state.metrics.get("x_position", 0)
+#     # feet_contact_proportion = get_feet_contact_proportion(transitions)
+#     return {
+#         "cum_reward": cum_reward,
+#         # "feet_contact_proportion": feet_contact_proportion,
+#         "x_distance": x_distance
+#     }
