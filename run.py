@@ -97,6 +97,12 @@ def run(config: Dict, wandb_run: Run) -> None:
         elif config.get("distance", False):
             distances = evaluation_outcomes["x_distance"]
             fitness_values = replace_invalid_nan_zero(distances)
+        elif config.get("weighted_rewards", None) is not None:
+            weights = config["weighted_rewards"]
+            healthy_w, ctrl_w, forward_w = weights["healthy"], weights["ctrl"], weights["forward"]
+            fitness_values = healthy_w * detailed_rewards["healthy"] + ctrl_w * detailed_rewards["ctrl"] \
+                             + forward_w * detailed_rewards["forward"]
+            fitness_values = replace_invalid_nan_reward(fitness_values)
         else:
             fitness_values = reward_values
         end_eval = time.process_time()
@@ -165,26 +171,15 @@ def run(config: Dict, wandb_run: Run) -> None:
 if __name__ == '__main__':
     assert default_backend() == "gpu"
 
-    config_file = "configs/cgp_distance.yaml"
+    config_file = "configs/cgp_weighted.yaml"
 
-    for ennv in ["hopper", "walker2d"]:
+    for env in ["walker2d", "hopper"]:
         for seed in range(5):
-            for unhealthy_termination in [True, False]:
+            for hw in [0, 0.1]:
                 cfg = cgpax.get_config(config_file)
                 cfg["seed"] = seed
-                cfg["distance"] = False
-                cfg["unhealthy_termination"] = unhealthy_termination
-                cfg["problem"]["environment"] = ennv
+                cfg["problem"]["environment"] = env
+                cfg["weighted_rewards"]["healthy"] = hw
                 wb_run = wandb.init(config=cfg, project="cgpax")
                 run(cfg, wb_run)
                 wb_run.finish()
-
-        for seed in range(5):
-            cfg = cgpax.get_config(config_file)
-            cfg["seed"] = seed
-            cfg["unhealthy_termination"] = False
-            cfg["distance"] = True
-            cfg["problem"]["environment"] = ennv
-            wb_run = wandb.init(config=cfg, project="cgpax")
-            run(cfg, wb_run)
-            wb_run.finish()
