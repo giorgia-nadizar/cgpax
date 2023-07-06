@@ -17,15 +17,15 @@ problem:
   incremental_steps: 1
   maximize: true
 recursive: false
-seed: 0
+seed: [ 0,1,2,3,4 ]
 selection:
-  elite_size: 20
-  tour_size: 5
+  elite_size: 10
+  tour_size: 3
   type: tournament
 solver: cgp
 survival: truncation
 unhealthy_termination: true
 weighted_rewards:
-  healthy: 1
+  healthy: [ d,i,0,0.1,1 ]
   ctrl: 1
   forward: 1
