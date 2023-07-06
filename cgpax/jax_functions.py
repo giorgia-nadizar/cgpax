@@ -50,6 +50,8 @@ available_functions = {
     "greater": JaxFunction(lambda x, y: jnp.add(0.0, x > y), 2, ">")
 }
 
+constants = jnp.asarray([0.1, 1])
+
 
 @jit
 def function_switch(idx, *operands):

@@ -195,13 +195,13 @@ def run(config: Dict, wandb_run: Run) -> None:
 
 if __name__ == '__main__':
     assert default_backend() == "gpu"
-
-    config_file = "configs/cgp_weighted.yaml"
-    unpacked_configs = __unpack_dictionary__(cgpax.get_config(config_file))
-    print(f"Total configs found: {len(unpacked_configs)}")
-    for count, cfg in enumerate(unpacked_configs):
-        print(f"Running config {count}/{len(unpacked_configs)}")
-        print(cfg)
-        wb_run = wandb.init(config=cfg, project="cgpax")
-        run(cfg, wb_run)
-        wb_run.finish()
+    config_files = ["configs/lgp_weighted.yaml", "configs/cgp_weighted.yaml"]
+    for config_file in config_files:
+        unpacked_configs = __unpack_dictionary__(cgpax.get_config(config_file))
+        print(f"Total configs found: {len(unpacked_configs)}")
+        for count, cfg in enumerate(unpacked_configs):
+            print(f"Running config {count}/{len(unpacked_configs)}")
+            print(cfg)
+            wb_run = wandb.init(config=cfg, project="cgpax")
+            run(cfg, wb_run)
+            wb_run.finish()
