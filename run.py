@@ -120,10 +120,11 @@ def run(config: Dict, wandb_run: Run) -> None:
         elif config.get("weighted_rewards", None) is not None:
             weights = config["weighted_rewards"]
             healthy_w, ctrl_w, forward_w = weights["healthy"], weights["ctrl"], weights["forward"]
-            incremental_weight = _generation / config["n_generations"]
-            healthy_w = incremental_weight if healthy_w == "i" else healthy_w
-            ctrl_w = incremental_weight if ctrl_w == "i" else ctrl_w
-            forward_w = incremental_weight if forward_w == "i" else forward_w
+            incr_weight = _generation / config["n_generations"]
+            decr_weight = 1 - incr_weight
+            healthy_w = incr_weight if healthy_w == "i" else decr_weight if healthy_w == "d" else healthy_w
+            ctrl_w = incr_weight if ctrl_w == "i" else decr_weight if ctrl_w == "d" else ctrl_w
+            forward_w = incr_weight if forward_w == "i" else decr_weight if forward_w == "d" else forward_w
             fitness_values = healthy_w * detailed_rewards["healthy"] + ctrl_w * detailed_rewards["ctrl"] \
                              + forward_w * detailed_rewards["forward"]
             fitness_values = replace_invalid_nan_reward(fitness_values)
