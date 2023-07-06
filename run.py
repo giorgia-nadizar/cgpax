@@ -1,5 +1,6 @@
+import copy
 import time
-from typing import Dict
+from typing import Dict, List
 
 from wandb.sdk.wandb_run import Run
 
@@ -17,6 +18,25 @@ from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_s
     __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
     __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__
+
+
+def __unpack_dictionary__(config: Dict) -> List[Dict]:
+    config_list = []
+    for key, value in config.items():
+        if type(value) == dict:
+            unpacked_value = __unpack_dictionary__(value)
+            if len(unpacked_value) > 1:
+                config[key] = unpacked_value
+    for key, value in config.items():
+        if type(value) == list and len(value) > 1:
+            for v in value:
+                temp_config = copy.deepcopy(config)
+                temp_config[key] = v
+                config_list += __unpack_dictionary__(temp_config)
+            break
+    if len(config_list) == 0:
+        config_list.append(config)
+    return config_list
 
 
 def run(config: Dict, wandb_run: Run) -> None:
@@ -100,6 +120,10 @@ def run(config: Dict, wandb_run: Run) -> None:
         elif config.get("weighted_rewards", None) is not None:
             weights = config["weighted_rewards"]
             healthy_w, ctrl_w, forward_w = weights["healthy"], weights["ctrl"], weights["forward"]
+            incremental_weight = _generation / config["n_generations"]
+            healthy_w = incremental_weight if healthy_w == "i" else healthy_w
+            ctrl_w = incremental_weight if ctrl_w == "i" else ctrl_w
+            forward_w = incremental_weight if forward_w == "i" else forward_w
             fitness_values = healthy_w * detailed_rewards["healthy"] + ctrl_w * detailed_rewards["ctrl"] \
                              + forward_w * detailed_rewards["forward"]
             fitness_values = replace_invalid_nan_reward(fitness_values)
@@ -172,14 +196,11 @@ if __name__ == '__main__':
     assert default_backend() == "gpu"
 
     config_file = "configs/cgp_weighted.yaml"
-
-    for env in ["walker2d", "hopper"]:
-        for seed in range(5):
-            for hw in [0, 0.1]:
-                cfg = cgpax.get_config(config_file)
-                cfg["seed"] = seed
-                cfg["problem"]["environment"] = env
-                cfg["weighted_rewards"]["healthy"] = hw
-                wb_run = wandb.init(config=cfg, project="cgpax")
-                run(cfg, wb_run)
-                wb_run.finish()
+    unpacked_configs = __unpack_dictionary__(cgpax.get_config(config_file))
+    print(f"Total configs found: {len(unpacked_configs)}")
+    for count, cfg in enumerate(unpacked_configs):
+        print(f"Running config {count}/{len(unpacked_configs)}")
+        print(cfg)
+        wb_run = wandb.init(config=cfg, project="cgpax")
+        run(cfg, wb_run)
+        wb_run.finish()

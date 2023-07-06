@@ -10,6 +10,7 @@ import jax.numpy as jnp
 
 from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times
+from cgpax.jax_functions import available_functions
 from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
     compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask, \
     levels_back_transformation_function, lgp_one_point_crossover_genomes
@@ -51,6 +52,7 @@ def __init_environments__(config: Dict) -> List[Dict]:
 
 
 def __update_config_with_env_data__(config: Dict, env) -> None:
+    config["n_functions"] = len(available_functions)
     config["n_in"] = env.observation_size
     config["n_out"] = env.action_size
     if config["solver"] == "cgp":

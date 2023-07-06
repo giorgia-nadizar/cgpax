@@ -10,9 +10,6 @@ mutation:
 n_evals_per_individual:
   desc: null
   value: 5
-n_functions:
-  desc: null
-  value: 9
 n_generations:
   desc: null
   value: 1000

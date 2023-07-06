@@ -44,6 +44,8 @@ available_functions = {
     "abs": JaxFunction(lambda x, y: jnp.abs(x), 1, "|.|"),
     "exp": JaxFunction(lambda x, y: jnp.exp(x), 1, "exp"),
     "sin": JaxFunction(lambda x, y: jnp.sin(x), 1, "sin"),
+    "cos": JaxFunction(lambda x, y: jnp.cos(x), 1, "cos"),
+    "prot_log": JaxFunction(lambda x, y: jnp.log(jnp.abs(x)), 1, "log"),
     "lower": JaxFunction(lambda x, y: jnp.add(0.0, x < y), 2, "<"),
     "greater": JaxFunction(lambda x, y: jnp.add(0.0, x > y), 2, ">")
 }

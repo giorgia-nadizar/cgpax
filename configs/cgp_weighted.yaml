@@ -2,7 +2,6 @@ backend: positional
 constrain_outputs: true
 mutation: standard
 n_evals_per_individual: 5
-n_functions: 9
 n_generations: 1000
 n_individuals: 100
 n_nodes: 50
