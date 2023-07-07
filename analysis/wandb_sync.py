@@ -3,7 +3,7 @@ import os
 import pandas as pd
 import wandb
 
-from cgpax.run_utils import __update_config_with_env_data__, __init_environment_from_config__
+from cgpax.run_utils import __update_config_with_env_data__, __init_environment_from_config__, __config_to_run_name__
 from cgpax.utils import compute_active_size
 
 import jax.numpy as jnp
@@ -17,31 +17,8 @@ if __name__ == '__main__':
     counter = 0
     for wandb_run in runs:
         if wandb_run.state == "finished":
-            solver = wandb_run.config["solver"]
-            if solver == "cgp" and wandb_run.config["n_nodes"] > 50:
-                solver += "-large"
-            if solver == "cgp" and wandb_run.config.get("levels_back") is not None:
-                solver += "-local"
-            env_name = wandb_run.config["problem"]["environment"]
-            ea = "1+lambda" if wandb_run.config["n_parallel_runs"] > 1 else "mu+lambda"
-            day, month = int(wandb_run.created_at[8:10]), int(wandb_run.created_at[5:7])
-            fitness = "reward"
-            if wandb_run.config.get("novelty") is not None:
-                fitness = "novelty"
-            if wandb_run.config.get("distance", False):
-                fitness = "distance"
-            if wandb_run.config.get("weighted_rewards", None) is not None:
-                weights = wandb_run.config["weighted_rewards"]
-                healthy_w, ctrl_w, forward_w = weights["healthy"], weights["ctrl"], weights["forward"]
-                fitness = f"weighted-{healthy_w}-{ctrl_w}-{forward_w}"
-            if day >= 30 or month > 6:
-                ea += "-ga"
-                if wandb_run.config.get("unhealthy_termination", True):
-                    fitness += "-unhealthy_termination"
-                else:
-                    fitness += "-no_termination"
-            seed = wandb_run.config["seed"]
-            run_name = f"{env_name}_{solver}_{ea}_{fitness}_{seed}"
+            run_name, env_name, solver, ea, fitness, seed = __config_to_run_name__(wandb_run.config,
+                                                                                   wandb_run.created_at)
             wandb_run.name = run_name
             wandb_run.update()
 

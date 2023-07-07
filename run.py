@@ -17,7 +17,8 @@ from cgpax.jax_individual import generate_population
 from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_selection__, __compile_mutation__, \
     __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
-    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__
+    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__, \
+    __config_to_run_name__
 
 
 def __unpack_dictionary__(config: Dict) -> List[Dict]:
@@ -195,13 +196,25 @@ def run(config: Dict, wandb_run: Run) -> None:
 
 if __name__ == '__main__':
     assert default_backend() == "gpu"
+
+    api = wandb.Api(timeout=40)
+    entity, project = "giorgianadizar", "cgpax"
+    existing_run_names = [r.name for r in api.runs(entity + "/" + project) if r.state == "finished"]
+
     config_files = ["configs/lgp_weighted.yaml", "configs/cgp_weighted.yaml"]
+    unpacked_configs = []
+
     for config_file in config_files:
-        unpacked_configs = __unpack_dictionary__(cgpax.get_config(config_file))
-        print(f"Total configs found: {len(unpacked_configs)}")
-        for count, cfg in enumerate(unpacked_configs):
-            print(f"Running config {count}/{len(unpacked_configs)}")
-            print(cfg)
-            wb_run = wandb.init(config=cfg, project="cgpax")
-            run(cfg, wb_run)
-            wb_run.finish()
+        unpacked_configs += __unpack_dictionary__(cgpax.get_config(config_file))
+
+    print(f"Total configs found: {len(unpacked_configs)}")
+    for count, cfg in enumerate(unpacked_configs):
+        run_name, _, _, _, _, _ = __config_to_run_name__(cfg)
+        if run_name in existing_run_names:
+            continue
+        print(f"Running config {count}/{len(unpacked_configs)}")
+        print(cfg)
+        wb_run = wandb.init(config=cfg, project=project, name=run_name)
+        run(cfg, wb_run)
+        wb_run.finish()
+        print()

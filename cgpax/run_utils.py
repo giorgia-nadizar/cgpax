@@ -1,3 +1,4 @@
+from datetime import datetime
 from functools import partial
 from typing import List, Callable, Tuple, Dict, Union, Set
 
@@ -242,3 +243,36 @@ def __compute_novelty_scores__(final_positions: jnp.ndarray, novelty_archive: Se
     for pos in rounded_positions[~jnp.isnan(rounded_positions)]:
         novelty_archive.add(float(pos))
     return max_distances
+
+
+def __config_to_run_name__(config: Dict, date: str = None):
+    if date is None:
+        date = str(datetime.today())
+    solver = config["solver"]
+    if solver == "cgp" and config["n_nodes"] > 50:
+        solver += "-large"
+    if solver == "cgp" and config.get("levels_back") is not None:
+        solver += "-local"
+    env_name = config["problem"]["environment"]
+    ea = "1+lambda" if config["n_parallel_runs"] > 1 else "mu+lambda"
+    day, month = int(date[8:10]), int(date[5:7])
+    fitness = "reward"
+    if config.get("novelty") is not None:
+        fitness = "novelty"
+    if config.get("distance", False):
+        fitness = "distance"
+    if config.get("weighted_rewards", None) is not None:
+        weights = config["weighted_rewards"]
+        healthy_w, ctrl_w, forward_w = weights["healthy"], weights["ctrl"], weights["forward"]
+        fitness = f"weighted-{healthy_w}-{ctrl_w}-{forward_w}"
+    if day >= 30 or month > 6:
+        ea += "-ga"
+        if config.get("unhealthy_termination", True):
+            fitness += "-unhealthy_termination"
+        else:
+            fitness += "-no_termination"
+    if month >= 7 and ((solver == "lgp" and day >= 6) or day >= 7):
+        ea = ea.replace("-ga", "-ga1")
+    seed = config["seed"]
+    run_name = f"{env_name}_{solver}_{ea}_{fitness}_{seed}"
+    return run_name, env_name, solver, ea, fitness, seed
