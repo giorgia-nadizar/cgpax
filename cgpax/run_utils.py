@@ -52,13 +52,18 @@ def __init_environments__(config: Dict) -> List[Dict]:
     ]
 
 
-def __update_config_with_env_data__(config: Dict, env) -> None:
+def __update_config_with_data__(
+        config: Dict,
+        observation_space_size: int,
+        action_space_size: int) -> None:
+    """Updates the config dictionnary based on the provided values."""
     config["n_functions"] = len(available_functions)
     config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
 
-    config["n_in_env"] = env.observation_size
+    config["n_in_env"] = observation_space_size
     config["n_in"] = config["n_in_env"] + config["n_constants"]
-    config["n_out"] = env.action_size
+    config["n_out"] = action_space_size
+
     if config["solver"] == "cgp":
         config["buffer_size"] = config["n_in"] + config["n_nodes"]
         config["genome_size"] = 4 * config["n_nodes"] + config["n_out"]
@@ -68,6 +73,10 @@ def __update_config_with_env_data__(config: Dict, env) -> None:
     else:
         config["n_registers"] = config["n_in"] + config["n_extra_registers"] + config["n_out"]
         config["genome_size"] = 5 * config["n_rows"]
+
+
+def __update_config_with_env_data__(config: Dict, env) -> None:
+    __update_config_with_data__(config, env.observation_size, env.action_size)
 
 
 def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, n_elites: int = 1) -> jnp.ndarray:
