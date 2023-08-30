@@ -56,7 +56,7 @@ def __update_config_with_data__(
         config: Dict,
         observation_space_size: int,
         action_space_size: int) -> None:
-    """Updates the config dictionnary based on the provided values."""
+    """Updates the config dictionary based on the provided values."""
     config["n_functions"] = len(available_functions)
     config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
 
@@ -181,7 +181,7 @@ def __compute_masks__(config: Dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
 
 def __compute_weights_mutation_function__(config: Dict) -> Callable[[random.PRNGKey], jnp.ndarray]:
     sigma = config.get("weights_sigma", 0.0)
-    length = config.get("n_rows", config["n_nodes"])
+    length = config.get("n_rows", config.get("n_nodes"))
 
     def gaussian_function(rnd_key: random.PRNGKey) -> jnp.ndarray:
         return random.normal(key=rnd_key, shape=[length]) * sigma
