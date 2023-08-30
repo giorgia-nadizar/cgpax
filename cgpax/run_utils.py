@@ -54,20 +54,20 @@ def __init_environments__(config: Dict) -> List[Dict]:
 
 def __update_config_with_env_data__(config: Dict, env) -> None:
     config["n_functions"] = len(available_functions)
-    config["n_constants"] = len(constants)
+    config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
 
     config["n_in_env"] = env.observation_size
     config["n_in"] = config["n_in_env"] + config["n_constants"]
     config["n_out"] = env.action_size
     if config["solver"] == "cgp":
         config["buffer_size"] = config["n_in"] + config["n_nodes"]
-        config["genome_size"] = 3 * config["n_nodes"] + config["n_out"]
+        config["genome_size"] = 4 * config["n_nodes"] + config["n_out"]
         levels_back = config.get("levels_back")
         if levels_back is not None and levels_back < config["n_in"]:
             config["levels_back"] = config["n_in"]
     else:
         config["n_registers"] = config["n_in"] + config["n_extra_registers"] + config["n_out"]
-        config["genome_size"] = 4 * config["n_rows"]
+        config["genome_size"] = 5 * config["n_rows"]
 
 
 def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, n_elites: int = 1) -> jnp.ndarray:
@@ -104,16 +104,20 @@ def __compile_crossover__(config: Dict) -> Union[Callable, None]:
 
 
 def __compile_mutation__(config: Dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
+                         weights_mutation_function: Callable[[random.PRNGKey], jnp.ndarray],
                          genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray],
                          n_mutations_per_individual: int = 1) -> Callable:
     if config["mutation"] == "standard":
         partial_multiple_mutations = partial(mutate_genome_n_times, n_mutations=n_mutations_per_individual,
                                              genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                             weights_mutation_function=weights_mutation_function,
                                              genome_transformation_function=genome_transformation_function)
     else:
         partial_multiple_mutations = partial(mutate_genome_n_times_stacked, n_mutations=n_mutations_per_individual,
                                              genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                             weights_mutation_function=weights_mutation_function,
                                              genome_transformation_function=genome_transformation_function)
+
     vmap_multiple_mutations = vmap(partial_multiple_mutations)
     return jit(vmap_multiple_mutations)
 
@@ -164,6 +168,16 @@ def __compute_masks__(config: Dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
         genome_mask = compute_lgp_genome_mask(config, config["n_in"])
         mutation_mask = compute_lgp_mutation_prob_mask(config)
     return genome_mask, mutation_mask
+
+
+def __compute_weights_mutation_function__(config: Dict) -> Callable[[random.PRNGKey], jnp.ndarray]:
+    sigma = config.get("weights_sigma", 0.0)
+    length = config.get("n_rows", config["n_nodes"])
+
+    def gaussian_function(rnd_key: random.PRNGKey) -> jnp.ndarray:
+        return random.normal(key=rnd_key, shape=[length]) * sigma
+
+    return gaussian_function
 
 
 def __compute_genome_transformation_function__(config: Dict) -> Callable[[jnp.ndarray], jnp.ndarray]:
@@ -249,10 +263,14 @@ def __config_to_run_name__(config: Dict, date: str = None):
     if date is None:
         date = str(datetime.today())
     solver = config["solver"]
-    if solver == "cgp" and config["n_nodes"] > 50:
+    if config["n_generations"] > 1000:
+        solver += "-long"
+    if config["solver"] == "cgp" and config["n_nodes"] > 50:
         solver += "-large"
-    if solver == "cgp" and config.get("levels_back") is not None:
+    if config["solver"] == "cgp" and config.get("levels_back") is not None:
         solver += "-local"
+    if config.get("weights_sigma", 0) != 0:
+        solver += "-weighted"
     env_name = config["problem"]["environment"]
     ea = "1+lambda" if config["n_parallel_runs"] > 1 else "mu+lambda"
     day, month = int(date[8:10]), int(date[5:7])
