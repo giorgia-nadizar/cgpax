@@ -1,0 +1,9 @@
+def program(inputs, buffer):
+  buffer[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]] = inputs
+  buffer[10] = *(buffer[2], buffer[2])
+  buffer[11] = *(buffer[10], buffer[2])
+  buffer[12] = -(buffer[4], buffer[1])
+  buffer[15] = +(buffer[12], buffer[12])
+  buffer[17] = -(buffer[15], buffer[0])
+  buffer[34] = +(buffer[15], buffer[17])
+  outputs = buffer[[11 34]]

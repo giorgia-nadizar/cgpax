@@ -1,0 +1,6 @@
+def program(inputs, buffer):
+  buffer[[0, 1, 2, 3, 4, 5]] = inputs
+  buffer[9] = -(buffer[1], buffer[1])
+  buffer[18] = log(buffer[9])
+  buffer[19] = *(buffer[0], buffer[18])
+  outputs = buffer[[19]]
