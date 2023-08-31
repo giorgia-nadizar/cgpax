@@ -1,0 +1,6 @@
+def program(inputs, r):
+  r[[0, 1, 2, 3, 4, 5]] = inputs
+  r[6] = log(r[11])
+  r[11] = *(r[6], r[6])
+  r[11] = sin(r[11])
+  outputs = r[-1:]
