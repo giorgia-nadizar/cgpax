@@ -1,0 +1,6 @@
+o0 = (exp(i9)+(i11-log(i2)))
+o1 = (i11-log(i2))
+o2 = log(i3)
+o3 = log(i2)
+o4 = exp(i11)
+o5 = |.|((i11-log(i2)))
