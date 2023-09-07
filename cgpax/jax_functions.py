@@ -47,7 +47,8 @@ available_functions = {
     "cos": JaxFunction(lambda x, y: jnp.cos(x), 1, "cos"),
     "prot_log": JaxFunction(lambda x, y: jnp.log(jnp.abs(x)), 1, "log"),
     "lower": JaxFunction(lambda x, y: jnp.add(0.0, x < y), 2, "<"),
-    "greater": JaxFunction(lambda x, y: jnp.add(0.0, x > y), 2, ">")
+    "greater": JaxFunction(lambda x, y: jnp.add(0.0, x > y), 2, ">"),
+    "sqrt": JaxFunction(lambda x, y: jnp.sqrt(x), 1, "sqrt"),
 }
 
 constants = jnp.asarray([0.1, 1])
