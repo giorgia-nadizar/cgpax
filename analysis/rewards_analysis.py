@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax import random
 
 import cgpax
-from analysis.genome_analysis import __load_last_genome__
+from analysis.genome_analysis import __load_genome__
 from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_lgp_genome, __evaluate_program_detailed_tracking__
 from cgpax.run_utils import __init_environment_from_config__, __update_config_with_env_data__
 
@@ -55,7 +55,7 @@ if __name__ == '__main__':
             cfg = cgpax.get_config(f"{base_p}/config.yaml")
             for inner_seed in range(max_seed):
                 try:
-                    genes, gen = __load_last_genome__(base_p, inner_seed)
+                    genes, gen = __load_genome__(base_p, inner_seed)
                 except FileNotFoundError:
                     continue
 
