@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 import jax.numpy as jnp
 from jax import jit
@@ -11,15 +11,17 @@ from pathlib import Path
 
 # NOTE: once initialized, the object should not be modified in compiled functions
 class Tracker:
-    def __init__(self, config: dict, top_k: int = 3, idx: int = 0, saving_interval: int = 100) -> None:
+    def __init__(self, config: dict, top_k: int = 3, idx: int = 0, saving_interval: int = 100,
+                 store_fitness_details: List[str] = None) -> None:
         self.config: dict = config
         self.top_k: int = top_k
         self.idx: int = idx
         self.saving_interval: int = saving_interval
+        self.store_fitness_details: List[str] = [] if store_fitness_details is None else store_fitness_details
 
     @partial(jit, static_argnums=(0,))
     def init(self) -> chex.ArrayTree:
-        return {
+        init_dict = {
             "training": {
                 # Fitness of the top k individuals during training (ordered)
                 "top_k_fit": jnp.zeros((self.config["n_generations"], self.top_k)),
@@ -42,6 +44,9 @@ class Tracker:
             },
             "generation": 0,
         }
+        for fitness_detail in self.store_fitness_details:
+            init_dict[fitness_detail] = jnp.zeros((self.config["n_generations"], self.config["n_individuals"]))
+        return init_dict
 
     @partial(jit, static_argnums=(0,))
     def update(self, tracker_state: chex.ArrayTree, fitness: chex.Array, rewards: chex.Array, detailed_rewards: Dict,
@@ -99,6 +104,11 @@ class Tracker:
 
         # NOTE: Update current generation counter
         tracker_state["generation"] += 1
+
+        # NOTE: Update additional fitness information
+        for fitness_detail in self.store_fitness_details:
+            tracker_state[fitness_detail] = tracker_state[fitness_detail].at[i].set(detailed_rewards[fitness_detail])
+
         return tracker_state
 
     def wandb_log(self, tracker_state, wdb_run) -> None:
@@ -108,38 +118,41 @@ class Tracker:
             prefix = f"{self.idx}_{gen}"
             self.wandb_save_genome(tracker_state["backup"]["best_individual"][gen], wdb_run, prefix)
 
-        wdb_run.log(
-            {
-                "training": {
-                    "run_id": self.idx,
-                    "generation": gen,
-                    f"top_k_fit": {
-                        f"top_{t}_fit": float(tracker_state["training"]["top_k_fit"][gen][t]) for t in range(self.top_k)
-                    },
-                    f"top_k_reward": {
-                        f"top_{t}_reward": float(tracker_state["training"]["top_k_reward"][gen][t]) for t in
-                        range(self.top_k)
-                    },
-                    f"top_k_healthy_reward": {
-                        f"top_{t}_healthy_reward": float(tracker_state["training"]["top_k_healthy_reward"][gen][t]) for
-                        t in range(self.top_k)
-                    },
-                    f"top_k_ctrl_reward": {
-                        f"top_{t}_ctrl_reward": float(tracker_state["training"]["top_k_ctrl_reward"][gen][t]) for t in
-                        range(self.top_k)},
-                    f"top_k_forward_reward": {
-                        f"top_{t}_forward_reward": float(tracker_state["training"]["top_k_forward_reward"][gen][t]) for
-                        t in range(self.top_k)
-                    },
-                    "fitness_mean": float(tracker_state["training"]["fitness_mean"][gen]),
-                    "fitness_std": float(tracker_state["training"]["fitness_std"][gen]),
-                    "fitness_median": float(tracker_state["training"]["fitness_median"][gen]),
-                    "fitness_1q": float(tracker_state["training"]["fitness_1q"][gen]),
-                    "fitness_3q": float(tracker_state["training"]["fitness_3q"][gen]),
-                    "evaluation_time": float(tracker_state["training"]["evaluation_time"][gen])
+        log_dict = {
+            "training": {
+                "run_id": self.idx,
+                "generation": gen,
+                f"top_k_fit": {
+                    f"top_{t}_fit": float(tracker_state["training"]["top_k_fit"][gen][t]) for t in range(self.top_k)
                 },
-            }
-        )
+                f"top_k_reward": {
+                    f"top_{t}_reward": float(tracker_state["training"]["top_k_reward"][gen][t]) for t in
+                    range(self.top_k)
+                },
+                f"top_k_healthy_reward": {
+                    f"top_{t}_healthy_reward": float(tracker_state["training"]["top_k_healthy_reward"][gen][t]) for
+                    t in range(self.top_k)
+                },
+                f"top_k_ctrl_reward": {
+                    f"top_{t}_ctrl_reward": float(tracker_state["training"]["top_k_ctrl_reward"][gen][t]) for t in
+                    range(self.top_k)},
+                f"top_k_forward_reward": {
+                    f"top_{t}_forward_reward": float(tracker_state["training"]["top_k_forward_reward"][gen][t]) for
+                    t in range(self.top_k)
+                },
+                "fitness_mean": float(tracker_state["training"]["fitness_mean"][gen]),
+                "fitness_std": float(tracker_state["training"]["fitness_std"][gen]),
+                "fitness_median": float(tracker_state["training"]["fitness_median"][gen]),
+                "fitness_1q": float(tracker_state["training"]["fitness_1q"][gen]),
+                "fitness_3q": float(tracker_state["training"]["fitness_3q"][gen]),
+                "evaluation_time": float(tracker_state["training"]["evaluation_time"][gen])
+            },
+        }
+
+        for fitness_detail in self.store_fitness_details:
+            log_dict["training"][fitness_detail] = jnp.array_str(tracker_state[fitness_detail][gen])
+
+        wdb_run.log(log_dict)
 
     @staticmethod
     def wandb_save_genome(genome, wdb_run, prefix=None) -> None:
