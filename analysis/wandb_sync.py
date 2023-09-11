@@ -10,7 +10,7 @@ from cgpax.utils import compute_active_size
 import jax.numpy as jnp
 
 if __name__ == '__main__':
-    flag = "all" if len(sys.argv) <= 1 else sys.argv[1].lower()
+    flag = "gp" if len(sys.argv) <= 1 else sys.argv[1].lower()
     assert flag in ["all", "rl", "gp"], "Argument not in the allowed list."
 
     os.system("wandb sync")
