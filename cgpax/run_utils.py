@@ -52,10 +52,7 @@ def __init_environments__(config: Dict) -> List[Dict]:
     ]
 
 
-def __update_config_with_data__(
-        config: Dict,
-        observation_space_size: int,
-        action_space_size: int) -> None:
+def __update_config_with_data__(config: Dict, observation_space_size: int, action_space_size: int) -> None:
     """Updates the config dictionary based on the provided values."""
     config["n_functions"] = len(available_functions)
     config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
@@ -196,13 +193,14 @@ def __compute_genome_transformation_function__(config: Dict) -> Callable[[jnp.nd
         return identity
 
 
-def __init_tracking__(config: Dict) -> Tuple:
+def __init_tracking__(config: Dict, store_fitness_details: List[str] = None) -> Tuple:
     if config.get("n_parallel_runs", 1) > 1:
-        trackers = [Tracker(config, idx=k) for k in range(config["n_parallel_runs"])]
+        trackers = [Tracker(config, idx=k, store_fitness_details=store_fitness_details) for k in
+                    range(config["n_parallel_runs"])]
         tracker_states = [t.init() for t in trackers]
         return trackers, tracker_states
     else:
-        tracker = Tracker(config, idx=config["seed"])
+        tracker = Tracker(config, idx=config["seed"], store_fitness_details=store_fitness_details)
         tracker_state = tracker.init()
         return tracker, tracker_state
 
