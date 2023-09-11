@@ -196,14 +196,15 @@ def __compute_genome_transformation_function__(config: Dict) -> Callable[[jnp.nd
         return identity
 
 
-def __init_tracking__(config: Dict, store_fitness_details: List[str] = None) -> Tuple:
+def __init_tracking__(config: Dict, saving_interval: int = 100, store_fitness_details: List[str] = None) -> Tuple:
     if config.get("n_parallel_runs", 1) > 1:
-        trackers = [Tracker(config, idx=k, store_fitness_details=store_fitness_details) for k in
-                    range(config["n_parallel_runs"])]
+        trackers = [Tracker(config, idx=k, saving_interval=saving_interval, store_fitness_details=store_fitness_details)
+                    for k in range(config["n_parallel_runs"])]
         tracker_states = [t.init() for t in trackers]
         return trackers, tracker_states
     else:
-        tracker = Tracker(config, idx=config["seed"], store_fitness_details=store_fitness_details)
+        tracker = Tracker(config, idx=config["seed"], saving_interval=saving_interval,
+                          store_fitness_details=store_fitness_details)
         tracker_state = tracker.init()
         return tracker, tracker_state
 

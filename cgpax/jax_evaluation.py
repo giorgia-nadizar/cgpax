@@ -80,9 +80,9 @@ def __evaluate_program_global__(program: Callable, program_state_size: int, rnd_
         inputs = env_state.obs
         new_program_state, actions = program(inputs, program_state)
         new_state = jit(env.step)(env_state, actions)
-        new_active_episode = active_episode * (1 - new_state.done)
-        corrected_reward = new_state.reward * new_active_episode
-        new_rew_carry = carry_update(rew_carry, new_state, new_active_episode)
+        corrected_reward = new_state.reward * active_episode
+        new_rew_carry = carry_update(rew_carry, new_state, active_episode)
+        new_active_episode = (active_episode * (1 - new_state.done)).astype(int)
         new_carry = new_state, new_program_state, cum_reward + corrected_reward, new_rew_carry, new_active_episode
         return new_carry, corrected_reward
 
