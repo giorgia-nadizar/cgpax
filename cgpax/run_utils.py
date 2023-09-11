@@ -1,7 +1,10 @@
+import asyncio
+import copy
 from datetime import datetime
-from functools import partial
+from functools import partial, reduce
 from typing import List, Callable, Tuple, Dict, Union, Set
 
+import telegram
 from brax.v1 import envs
 from brax.v1.envs.wrappers import EpisodeWrapper
 from wandb.apis.public import Run
@@ -301,3 +304,59 @@ def __config_to_run_name__(config: Dict, date: str = None):
     seed = config["seed"]
     run_name = f"{env_name}_{solver}_{ea}_{fitness}_{seed}"
     return run_name, env_name, solver, ea, fitness, seed
+
+
+# methods for update notifications
+
+async def __send_telegram_text__(bot: telegram.Bot, chat: str, text: str):
+    await bot.send_message(chat, text=text)
+
+
+def __notify_update__(text: str, bot: telegram.Bot = None, chat: str = None):
+    print(text)
+    if bot and chat:
+        asyncio.get_event_loop().run_until_complete(__send_telegram_text__(bot, chat, text))
+
+
+# methods for configs management
+
+def __unnest_dictionary__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+    nested_values = config[nesting_keyword]
+    del config[nesting_keyword]
+    return [config | x for x in nested_values]
+
+
+def __unnest_dictionary_recursive__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+    nesting_keywords = [x for x in config.keys() if nesting_keyword in x]
+    configs = [config]
+    partially_unpacked_configs = []
+    for keyword in nesting_keywords:
+        for conf in configs:
+            partially_unpacked_configs += __unnest_dictionary__(conf, keyword)
+        configs = partially_unpacked_configs
+        partially_unpacked_configs = []
+    return configs
+
+
+def __unpack_dictionary__(config: Dict) -> List[Dict]:
+    config_list = []
+    for key, value in config.items():
+        if type(value) == dict:
+            unpacked_value = __unpack_dictionary__(value)
+            if len(unpacked_value) > 1:
+                config[key] = unpacked_value
+    for key, value in config.items():
+        if type(value) == list and len(value) > 1:
+            for v in value:
+                temp_config = copy.deepcopy(config)
+                temp_config[key] = v
+                config_list += __unpack_dictionary__(temp_config)
+            break
+    if len(config_list) == 0:
+        config_list.append(config)
+    return config_list
+
+
+def __process_dictionary__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+    config_list = __unnest_dictionary_recursive__(config, nesting_keyword)
+    return list(reduce(lambda x, y: x + y, [__unpack_dictionary__(x) for x in config_list], []))
