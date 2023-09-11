@@ -63,7 +63,10 @@ def run(config: Dict, wandb_run: Run) -> None:
     select_survivals = __compile_survival_selection__(config)
 
     # initialize tracking
-    tracking_objects = __init_tracking__(config, store_fitness_details=config.get("store_fitness_details", None),
+    store_fitness_details = config.get("store_fitness_details", [])
+    store_fitness_details = store_fitness_details if isinstance(store_fitness_details, list) else [
+        store_fitness_details]
+    tracking_objects = __init_tracking__(config, store_fitness_details=store_fitness_details,
                                          saving_interval=config["saving_interval"])
 
     rnd_key, genome_key = random.split(rnd_key, 2)
@@ -189,7 +192,7 @@ if __name__ == '__main__':
     entity, project = "giorgianadizar", "cgpax"
     existing_run_names = [r.name for r in api.runs(entity + "/" + project) if r.state == "finished"]
 
-    config_files = ["configs/inv_pend_details.yaml"]
+    config_files = ["configs/miniant.yaml"]
     unpacked_configs = []
 
     for config_file in config_files:

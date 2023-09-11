@@ -1,11 +1,13 @@
 import asyncio
 import copy
+import functools
 from datetime import datetime
 from functools import partial, reduce
 from typing import List, Callable, Tuple, Dict, Union, Set
 
 import telegram
 from brax.v1 import envs
+from brax.v1.envs import ant
 from brax.v1.envs.wrappers import EpisodeWrapper
 from wandb.apis.public import Run
 
@@ -24,10 +26,13 @@ from cgpax.utils import identity
 
 
 def __init_environment__(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> EpisodeWrapper:
-    try:
-        env = envs.get_environment(env_name=env_name, terminate_when_unhealthy=terminate_when_unhealthy)
-    except TypeError:
-        env = envs.get_environment(env_name=env_name)
+    if env_name == "miniant":
+        env = functools.partial(ant.Ant, use_contact_forces=False)(terminate_when_unhealthy=terminate_when_unhealthy)
+    else:
+        try:
+            env = envs.get_environment(env_name=env_name, terminate_when_unhealthy=terminate_when_unhealthy)
+        except TypeError:
+            env = envs.get_environment(env_name=env_name)
     env = EpisodeWrapper(env, episode_length=episode_length, action_repeat=1)
     return env
 
@@ -347,7 +352,7 @@ def __unpack_dictionary__(config: Dict) -> List[Dict]:
             if len(unpacked_value) > 1:
                 config[key] = unpacked_value
     for key, value in config.items():
-        if type(value) == list and len(value) > 1:
+        if type(value) == list and len(value) > 1 and not key.endswith("_list"):
             for v in value:
                 temp_config = copy.deepcopy(config)
                 temp_config[key] = v
@@ -355,7 +360,7 @@ def __unpack_dictionary__(config: Dict) -> List[Dict]:
             break
     if len(config_list) == 0:
         config_list.append(config)
-    return config_list
+    return [{key.replace("_list", ""): value for key, value in cfg.items()} for cfg in config_list]
 
 
 def __process_dictionary__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
