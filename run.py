@@ -1,3 +1,4 @@
+import asyncio
 import copy
 import time
 from typing import Dict, List
@@ -6,11 +7,12 @@ from wandb.sdk.wandb_run import Run
 
 import cgpax
 import wandb
+import telegram
 from jax import jit, default_backend
 import jax.numpy as jnp
 from jax import random
 
-from functools import partial
+from functools import partial, reduce
 
 from cgpax.jax_individual import generate_population
 
@@ -18,7 +20,35 @@ from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_s
     __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
     __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
     __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__, \
-    __config_to_run_name__
+    __config_to_run_name__, __compute_weights_mutation_function__
+
+
+async def __send_telegram_text__(bot: telegram.Bot, chat: str, text: str):
+    await bot.send_message(chat, text=text)
+
+
+def __notify_update__(text: str, bot: telegram.Bot = None, chat: str = None):
+    print(text)
+    if bot and chat:
+        asyncio.get_event_loop().run_until_complete(__send_telegram_text__(bot, chat, text))
+
+
+def __unnest_dictionary__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+    nested_values = config[nesting_keyword]
+    del config[nesting_keyword]
+    return [config | x for x in nested_values]
+
+
+def __unnest_dictionary_recursive__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+    nesting_keywords = [x for x in config.keys() if nesting_keyword in x]
+    configs = [config]
+    partially_unpacked_configs = []
+    for keyword in nesting_keywords:
+        for conf in configs:
+            partially_unpacked_configs += __unnest_dictionary__(conf, keyword)
+        configs = partially_unpacked_configs
+        partially_unpacked_configs = []
+    return configs
 
 
 def __unpack_dictionary__(config: Dict) -> List[Dict]:
@@ -38,6 +68,11 @@ def __unpack_dictionary__(config: Dict) -> List[Dict]:
     if len(config_list) == 0:
         config_list.append(config)
     return config_list
+
+
+def __process_dictionary__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+    config_list = __unnest_dictionary_recursive__(config, nesting_keyword)
+    return list(reduce(lambda x, y: x + y, [__unpack_dictionary__(x) for x in config_list], []))
 
 
 def run(config: Dict, wandb_run: Run) -> None:
@@ -68,23 +103,26 @@ def run(config: Dict, wandb_run: Run) -> None:
 
     # preliminary evo steps
     genome_mask, mutation_mask = __compute_masks__(config)
+    weights_mutation_function = __compute_weights_mutation_function__(config)
     genome_transformation_function = __compute_genome_transformation_function__(config)
 
     # compilation of functions
     evaluate_genomes = __compile_genome_evaluation__(config, environment, config["problem"]["episode_length"])
     select_parents = __compile_parents_selection__(config)
     crossover_genomes = __compile_crossover__(config)
-    mutate_genomes = __compile_mutation__(config, genome_mask, mutation_mask, genome_transformation_function)
+    mutate_genomes = __compile_mutation__(config, genome_mask, mutation_mask, weights_mutation_function,
+                                          genome_transformation_function)
     replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
     replace_invalid_nan_zero = jit(partial(jnp.nan_to_num, nan=0))
     select_survivals = __compile_survival_selection__(config)
 
     # initialize tracking
-    tracking_objects = __init_tracking__(config)
+    tracking_objects = __init_tracking__(config, store_fitness_details=["healthy", "ctrl", "forward"])
 
     rnd_key, genome_key = random.split(rnd_key, 2)
     genomes = generate_population(pop_size=config["n_individuals"] * config.get("n_parallel_runs", 1),
                                   genome_mask=genome_mask, rnd_key=genome_key,
+                                  weights_mutation_function=weights_mutation_function,
                                   genome_transformation_function=genome_transformation_function)
 
     times = {}
@@ -197,23 +235,27 @@ def run(config: Dict, wandb_run: Run) -> None:
 if __name__ == '__main__':
     assert default_backend() == "gpu"
 
+    telegram_config = cgpax.get_config("telegram/token.yaml")
+    telegram_bot = telegram.Bot(telegram_config["token"])
+
     api = wandb.Api(timeout=40)
     entity, project = "giorgianadizar", "cgpax"
     existing_run_names = [r.name for r in api.runs(entity + "/" + project) if r.state == "finished"]
 
-    config_files = ["configs/lgp_weighted.yaml", "configs/cgp_weighted.yaml"]
+    config_files = ["configs/detailed_health.yaml"]
     unpacked_configs = []
 
     for config_file in config_files:
-        unpacked_configs += __unpack_dictionary__(cgpax.get_config(config_file))
+        unpacked_configs += __process_dictionary__(cgpax.get_config(config_file))
 
-    print(f"Total configs found: {len(unpacked_configs)}")
+    __notify_update__(f"Total configs found: {len(unpacked_configs)}", telegram_bot, telegram_config["chat_id"])
     for count, cfg in enumerate(unpacked_configs):
         run_name, _, _, _, _, _ = __config_to_run_name__(cfg)
         if run_name in existing_run_names:
+            __notify_update__(f"{count + 1}/{len(unpacked_configs)} - {run_name} already exists")
             continue
-        print(f"Running config {count}/{len(unpacked_configs)}")
-        print(cfg)
+        __notify_update__(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
+                          telegram_config["chat_id"])
         wb_run = wandb.init(config=cfg, project=project, name=run_name)
         run(cfg, wb_run)
         wb_run.finish()
