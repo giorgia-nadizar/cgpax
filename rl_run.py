@@ -3,6 +3,7 @@ import os
 from typing import Dict, Callable
 
 import telegram
+from brax.v1.envs import ant
 from jax import default_backend
 
 import cgpax
@@ -42,6 +43,11 @@ def training_function(env: str, solver: str, seed: int) -> Callable:
                                      episode_length=1000, normalize_observations=True, action_repeat=1, unroll_length=5,
                                      num_minibatches=32, num_updates_per_batch=4, discounting=0.97, learning_rate=3e-4,
                                      entropy_cost=1e-2, num_envs=4096, batch_size=2048, seed=seed),
+            'miniant': functools.partial(ppo.train, num_timesteps=50_000_000, num_evals=20, reward_scaling=10,
+                                         episode_length=1000, normalize_observations=True, action_repeat=1,
+                                         unroll_length=5, num_minibatches=32, num_updates_per_batch=4, discounting=0.97,
+                                         learning_rate=3e-4, entropy_cost=1e-2, num_envs=4096, batch_size=2048,
+                                         seed=seed),
             'reacher': functools.partial(ppo.train, num_timesteps=50_000_000, num_evals=20, reward_scaling=5,
                                          episode_length=1000, normalize_observations=True, action_repeat=4,
                                          unroll_length=50, num_minibatches=32, num_updates_per_batch=8,
@@ -77,7 +83,10 @@ def training_function(env: str, solver: str, seed: int) -> Callable:
 def run(config: Dict, run_name: str):
     wdb_run = wandb.init(config=config, project="cgpax", name=run_name)
     train_fn = training_function(env=config["environment"], seed=config["seed"], solver=config["rl"]["trainer"])
-    env = envs.get_environment(env_name=config["environment"])
+    if config["environment"] == "miniant":
+        env = functools.partial(ant.Ant, use_contact_forces=False)()
+    else:
+        env = envs.get_environment(env_name=config["environment"])
 
     def progress(step: int, metrics: Dict):
         wdb_run.log(data=metrics, step=step)
