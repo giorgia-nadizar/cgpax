@@ -2,7 +2,7 @@ backend: positional
 constrain_outputs: true
 mutation: standard
 n_evals_per_individual: 5
-n_generations: 2500
+n_generations: 1500
 n_individuals: 100
 n_nodes: 50
 n_parallel_runs: 1
@@ -12,17 +12,17 @@ p_mut_functions: 0.1
 p_mut_inputs: 0.1
 p_mut_outputs: 0.3
 problem:
-  environment: [ inverted_pendulum,inverted_double_pendulum,swimmer,halfcheetah,ant,hopper,walker2d ]
+  environment: hopper
   episode_length: 1000
   incremental_steps: 1
   maximize: true
 recursive: false
-seed: [ 100,101,102,103,104,105,106,107,108,109 ]
+seed: 100
 selection:
   elite_size: 10
   tour_size: 3
   type: tournament
 solver: cgp
 survival: truncation
-unhealthy_termination: true
+unhealthy_termination: false
 use_input_constants: true
