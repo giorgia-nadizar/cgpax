@@ -11,9 +11,9 @@ from pathlib import Path
 
 # NOTE: once initialized, the object should not be modified in compiled functions
 class Tracker:
-    def __init__(self, config: dict, top_k: int = 3, idx: int = 0, saving_interval: int = 100,
+    def __init__(self, config: Dict, top_k: int = 3, idx: int = 0, saving_interval: int = 100,
                  store_fitness_details: List[str] = None) -> None:
-        self.config: dict = config
+        self.config: Dict = config
         self.top_k: int = top_k
         self.idx: int = idx
         self.saving_interval: int = saving_interval
@@ -50,7 +50,7 @@ class Tracker:
 
     @partial(jit, static_argnums=(0,))
     def update(self, tracker_state: chex.ArrayTree, fitness: chex.Array, rewards: chex.Array, detailed_rewards: Dict,
-               best_individual: chex.Array, times: dict) -> chex.ArrayTree:
+               best_individual: chex.Array, times: Dict) -> chex.ArrayTree:
         i = tracker_state["generation"]
         # [Training] - update top_k_fitness using old state (carry best over)
 

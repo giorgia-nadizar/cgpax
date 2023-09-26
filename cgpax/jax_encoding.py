@@ -1,4 +1,4 @@
-from typing import Callable, Tuple
+from typing import Callable, Tuple, Dict
 
 import jax.numpy as jnp
 from jax import jit
@@ -47,7 +47,7 @@ def __update_register__(row_idx: int,
     return lhs_genes, x_genes, y_genes, f_genes, weights, n_in, register
 
 
-def genome_to_cgp_program(genome: jnp.ndarray, config: dict,
+def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
                           outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh) -> Callable:
     n_in_env = config["n_in_env"]
     n_const = config["n_constants"]
@@ -78,7 +78,7 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: dict,
     return jit(program)
 
 
-def genome_to_lgp_program(genome: jnp.ndarray, config: dict,
+def genome_to_lgp_program(genome: jnp.ndarray, config: Dict,
                           outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh) -> Callable:
     n_in_env = config["n_in_env"]
     n_const = config["n_constants"]

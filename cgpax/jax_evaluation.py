@@ -114,7 +114,7 @@ def __evaluate_program_detailed_tracking__(program: Callable, program_state_size
 
 
 def __evaluate_genome_n_times__(evaluation_function: Callable, genome: jnp.ndarray, rnd_key: random.PRNGKey,
-                                config: dict, env: EpisodeWrapper, n_times: int,
+                                config: Dict, env: EpisodeWrapper, n_times: int,
                                 episode_length: int = 1000, inner_evaluator: Callable = __evaluate_program__) -> Dict:
     rnd_key, *subkeys = random.split(rnd_key, n_times + 1)
     subkeys_array = jnp.array(subkeys)
@@ -124,35 +124,35 @@ def __evaluate_genome_n_times__(evaluation_function: Callable, genome: jnp.ndarr
     return vmap_evaluate_genome(genome, subkeys_array)
 
 
-def evaluate_cgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict,
+def evaluate_cgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: Dict,
                                 env: EpisodeWrapper, n_times: int, episode_length: int = 1000,
                                 inner_evaluator: Callable = __evaluate_program__) -> Dict:
     return __evaluate_genome_n_times__(evaluate_cgp_genome, genome, rnd_key, config, env, n_times, episode_length,
                                        inner_evaluator=inner_evaluator)
 
 
-def evaluate_lgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict,
+def evaluate_lgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: Dict,
                                 env: EpisodeWrapper, n_times: int, episode_length: int = 1000,
                                 inner_evaluator: Callable = __evaluate_program__) -> Dict:
     return __evaluate_genome_n_times__(evaluate_lgp_genome, genome, rnd_key, config, env, n_times, episode_length,
                                        inner_evaluator=inner_evaluator)
 
 
-def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: EpisodeWrapper,
+def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: Dict, env: EpisodeWrapper,
                         episode_length: int = 1000, inner_evaluator: Callable = __evaluate_program__) -> Dict:
     return inner_evaluator(genome_to_cgp_program(genome, config), config["buffer_size"], rnd_key, env,
                            episode_length)
 
 
-def evaluate_lgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: dict, env: EpisodeWrapper,
+def evaluate_lgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: Dict, env: EpisodeWrapper,
                         episode_length: int = 1000, inner_evaluator: Callable = __evaluate_program__) -> Dict:
     return inner_evaluator(genome_to_lgp_program(genome, config), config["n_registers"], rnd_key, env,
                            episode_length)
 
 
-def evaluate_cgp_genome_regression(genome: jnp.ndarray, config: dict, observations: jnp.ndarray,
+def evaluate_cgp_genome_regression(genome: jnp.ndarray, config: Dict, observations: jnp.ndarray,
                                    targets: jnp.ndarray) -> float:
-    def predict_row(observation: jnp.ndarray, genome: jnp.ndarray, config: dict) -> jnp.ndarray:
+    def predict_row(observation: jnp.ndarray, genome: jnp.ndarray, config: Dict) -> jnp.ndarray:
         program = genome_to_cgp_program(genome, config)
         _, y_tilde = program(observation, jnp.zeros(config["buffer_size"]))
         return y_tilde

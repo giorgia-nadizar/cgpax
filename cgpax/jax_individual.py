@@ -1,5 +1,5 @@
 from functools import partial
-from typing import Tuple, Callable
+from typing import Tuple, Callable, Dict
 
 from jax import vmap
 import jax.numpy as jnp
@@ -19,14 +19,14 @@ def levels_back_transformation_function(n_in: int, n_nodes: int) -> Callable[[jn
     return genome_transformation_function
 
 
-def compute_cgp_mutation_prob_mask(config: dict, n_out: int) -> jnp.ndarray:
+def compute_cgp_mutation_prob_mask(config: Dict, n_out: int) -> jnp.ndarray:
     in_mut_mask = config["p_mut_inputs"] * jnp.ones(config["n_nodes"])
     f_mut_mask = config["p_mut_functions"] * jnp.ones(config["n_nodes"])
     out_mut_mask = config["p_mut_outputs"] * jnp.ones(n_out)
     return jnp.concatenate((in_mut_mask, in_mut_mask, f_mut_mask, out_mut_mask))
 
 
-def compute_lgp_mutation_prob_mask(config: dict) -> jnp.ndarray:
+def compute_lgp_mutation_prob_mask(config: Dict) -> jnp.ndarray:
     n_rows = config["n_rows"]
     lhs_mask = config["p_mut_lhs"] * jnp.ones(n_rows)
     rhs_mask = config["p_mut_rhs"] * jnp.ones(n_rows)
@@ -34,7 +34,7 @@ def compute_lgp_mutation_prob_mask(config: dict) -> jnp.ndarray:
     return jnp.concatenate((lhs_mask, rhs_mask, rhs_mask, f_mask))
 
 
-def compute_cgp_genome_mask(config: dict, n_in: int, n_out: int) -> jnp.ndarray:
+def compute_cgp_genome_mask(config: Dict, n_in: int, n_out: int) -> jnp.ndarray:
     n_nodes = config["n_nodes"]
     if config.get("recursive", False):
         in_mask = (n_in + n_nodes) * jnp.ones(n_nodes)
@@ -50,7 +50,7 @@ def compute_cgp_genome_mask(config: dict, n_in: int, n_out: int) -> jnp.ndarray:
     return jnp.concatenate((in_mask, in_mask, f_mask, out_mask))
 
 
-def compute_lgp_genome_mask(config: dict, n_in: int) -> jnp.ndarray:
+def compute_lgp_genome_mask(config: Dict, n_in: int) -> jnp.ndarray:
     n_rows = config["n_rows"]
     n_registers = config["n_registers"]
     lhs_mask = (n_registers - n_in) * jnp.ones(n_rows)
