@@ -41,7 +41,7 @@ available_functions = {
     "minus": JaxFunction(lambda x, y: jnp.add(x, -y), 2, "-"),
     "times": JaxFunction(lambda x, y: jnp.multiply(x, y), 2, "*"),
     "prot_div": JaxFunction(lambda x, y: cond(y == 0, jit(lambda a, b: 1.0), jnp.divide, x, y), 2, "/"),
-    "abs": JaxFunction(lambda x, y: jnp.abs(x), 1, "|.|"),
+    "abs": JaxFunction(lambda x, y: jnp.abs(x), 1, "abs"),
     "exp": JaxFunction(lambda x, y: jnp.exp(x), 1, "exp"),
     "sin": JaxFunction(lambda x, y: jnp.sin(x), 1, "sin"),
     "cos": JaxFunction(lambda x, y: jnp.cos(x), 1, "cos"),
