@@ -1,9 +1,10 @@
-from typing import List, Tuple, Any
+from typing import List, Tuple, Any, Dict
 
 import numpy as np
 import jax.numpy as jnp
 from jax import jit
 
+from cgpax.interpretability_utils import evaluate_interpretability
 from cgpax.jax_functions import available_functions
 
 import pygraphviz as pgv
@@ -14,7 +15,7 @@ def identity(x: Any, *args) -> Any:
     return x
 
 
-def compute_active_size(genome: jnp.ndarray, config: dict) -> Tuple[int, int]:
+def compute_active_size(genome: jnp.ndarray, config: Dict) -> Tuple[int, int]:
     if config["solver"] == "cgp":
         n_nodes = config["n_nodes"]
         n_out = config["n_out"]
@@ -31,7 +32,7 @@ def compute_active_size(genome: jnp.ndarray, config: dict) -> Tuple[int, int]:
 
 
 def compute_active_graph(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, out_genes: jnp.ndarray,
-                         config: dict) -> np.ndarray:
+                         config: Dict) -> np.ndarray:
     n_nodes = config["n_nodes"]
     n_in = config["n_in"]
     active = np.zeros(n_in + n_nodes)
@@ -51,7 +52,7 @@ def __compute_active_graph__(active: np.ndarray, x_genes: jnp.ndarray, y_genes: 
             __compute_active_graph__(active, x_genes, y_genes, f_genes, n_in, int(y_genes[idx - n_in]))
 
 
-def cgp_expression_from_genome(genome: jnp.ndarray, config: dict) -> str:
+def cgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     n_in, n_out = config["n_in"], config["n_out"]
     n_nodes = config["n_nodes"]
     x_genes, y_genes, f_genes, out_genes, weights = jnp.split(genome, jnp.asarray(
@@ -76,7 +77,7 @@ def __replace_cgp_expression__(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_gen
                f"{function.symbol}{__replace_cgp_expression__(x_genes, y_genes, f_genes, n_in, int(y_genes[gene_idx]))})"
 
 
-def lgp_expression_from_genome(genome: jnp.ndarray, config: dict) -> str:
+def lgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     lhs_genes, x_genes, y_genes, f_genes, weights = jnp.split(genome, 5)
     lhs_genes += config["n_in"]
     target = ""
@@ -100,7 +101,7 @@ def __replace_lgp_expression__(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_g
     return f"i{register_number}" if register_number < n_in else "0"
 
 
-def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
+def readable_cgp_program_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     n_in, n_out = config["n_in"], config["n_out"]
     n_nodes = config["n_nodes"]
     x_genes, y_genes, f_genes, out_genes, weights = jnp.split(genome, jnp.asarray(
@@ -127,7 +128,7 @@ def readable_cgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
 
 
 def compute_coding_lines(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray,
-                         config: dict) -> np.ndarray:
+                         config: Dict) -> np.ndarray:
     active = np.zeros(config["n_rows"])
     output_registers = set(range(config["n_registers"] - config["n_out"], config["n_registers"]))
     for row_id in range(config["n_rows"] - 1, -1, -1):
@@ -152,7 +153,7 @@ def __compute_coding_lines__(active: np.ndarray, lhs_genes: jnp.ndarray, x_genes
                 break
 
 
-def readable_lgp_program_from_genome(genome: jnp.ndarray, config: dict) -> str:
+def readable_lgp_program_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     lhs_genes, x_genes, y_genes, f_genes, weights = jnp.split(genome, 5)
     lhs_genes += config["n_in"]
     functions = list(available_functions.values())
@@ -191,7 +192,12 @@ def __reassign_variables__(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes
     return lhs_ids, x_ids, y_ids
 
 
-def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue",
+def graph_from_genome(genome: jnp.ndarray, config: Dict, x_color: str = "blue", y_color: str = "orange") -> pgv.AGraph:
+    return cgp_graph_from_genome(genome, config, x_color, y_color) if config["solver"] == "cgp" \
+        else lgp_graph_from_genome(genome, config, x_color, y_color)
+
+
+def lgp_graph_from_genome(genome: jnp.ndarray, config: Dict, x_color: str = "blue",
                           y_color: str = "orange") -> pgv.AGraph:
     lhs_genes, x_genes, y_genes, f_genes, weights = jnp.split(genome, 5)
     lhs_genes = lhs_genes.astype(int)
@@ -242,7 +248,7 @@ def lgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
     return graph
 
 
-def cgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blue",
+def cgp_graph_from_genome(genome: jnp.ndarray, config: Dict, x_color: str = "blue",
                           y_color: str = "orange") -> pgv.AGraph:
     n_in, n_out = config["n_in"], config["n_out"]
     n_nodes = config["n_nodes"]
@@ -272,3 +278,11 @@ def cgp_graph_from_genome(genome: jnp.ndarray, config: dict, x_color: str = "blu
                 graph.add_edge(node_ids[y_genes[idx]], current_node, color=y_color)
 
     return graph
+
+
+def interpretability_from_genome(genome: jnp.ndarray, config: Dict) -> float:
+    expression = cgp_expression_from_genome(genome, config) if config["solver"] == "cgp" \
+        else lgp_expression_from_genome(genome, config)
+    equations = expression.rstrip().split("\n")
+    interpretabilities = [evaluate_interpretability(eq.split("=")[1]) for eq in equations]
+    return sum(interpretabilities) / len(interpretabilities)
