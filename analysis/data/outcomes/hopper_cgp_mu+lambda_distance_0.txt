@@ -1,8 +1,0 @@
-def program(inputs, buffer):
-  buffer[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]] = inputs
-  buffer[11] = /(buffer[4], buffer[5])
-  buffer[12] = +(buffer[8], buffer[11])
-  buffer[13] = +(buffer[4], buffer[4])
-  buffer[14] = <(buffer[2], buffer[13])
-  buffer[15] = >(buffer[14], buffer[0])
-  outputs = buffer[[ 7 15 12]]

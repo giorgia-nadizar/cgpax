@@ -1,9 +1,0 @@
-def program(inputs, buffer):
-  buffer[[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10]] = inputs
-  buffer[29] = sin(buffer[10])
-  buffer[30] = |.|(buffer[8])
-  buffer[31] = *(buffer[7], buffer[2])
-  buffer[40] = -(buffer[29], buffer[5])
-  buffer[41] = |.|(buffer[0])
-  buffer[60] = *(buffer[31], buffer[41])
-  outputs = buffer[[60 30 40]]
