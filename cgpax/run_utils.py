@@ -14,14 +14,14 @@ from wandb.apis.public import Run
 from jax import vmap, jit, random
 import jax.numpy as jnp
 
-from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
+from cgpax.evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times
-from cgpax.jax_functions import available_functions, constants
-from cgpax.jax_individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
+from cgpax.functions import available_functions, constants
+from cgpax.individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
     compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask, \
     levels_back_transformation_function, lgp_one_point_crossover_genomes
-from cgpax.jax_selection import truncation_selection, tournament_selection, fp_selection, composed_selection
-from cgpax.jax_tracker import Tracker
+from cgpax.selection import truncation_selection, tournament_selection, fp_selection, composed_selection
+from cgpax.tracker import Tracker
 from cgpax.utils import identity
 
 

@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax import jit
 
 from cgpax.interpretability_utils import evaluate_interpretability
-from cgpax.jax_functions import available_functions
+from cgpax.functions import available_functions
 
 import pygraphviz as pgv
 

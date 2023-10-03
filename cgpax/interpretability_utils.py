@@ -1,7 +1,7 @@
 import re
 from typing import List
 
-from cgpax.jax_functions import available_functions
+from cgpax.functions import available_functions
 
 interpretability_weights = {
     "offset": 79.1,

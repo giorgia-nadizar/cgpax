@@ -7,7 +7,7 @@ from jax import random
 
 import cgpax
 from analysis.genome_analysis import _load_genome
-from cgpax.jax_evaluation import evaluate_cgp_genome, evaluate_lgp_genome, _evaluate_program_detailed_tracking
+from cgpax.evaluation import evaluate_cgp_genome, evaluate_lgp_genome, _evaluate_program_detailed_tracking
 from cgpax.run_utils import init_environment_from_config, update_config_with_env_data
 
 

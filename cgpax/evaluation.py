@@ -4,7 +4,7 @@ from typing import Callable, Dict, Tuple, Any
 from brax.v1.envs import State
 from brax.v1.envs.wrappers import EpisodeWrapper
 
-from cgpax.jax_encoding import genome_to_cgp_program, genome_to_lgp_program
+from cgpax.encoding import genome_to_cgp_program, genome_to_lgp_program
 
 from jax import lax, jit, vmap
 from jax import random

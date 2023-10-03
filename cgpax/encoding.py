@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax import jit
 from jax.lax import fori_loop
 
-from cgpax.jax_functions import function_switch, constants
+from cgpax.functions import function_switch, constants
 
 
 @jit

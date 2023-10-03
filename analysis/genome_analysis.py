@@ -7,13 +7,13 @@ from brax.v1.envs.wrappers import EpisodeWrapper
 
 from jax import random
 from brax.v1.io import html
-import cgpax.jax_encoding
+import cgpax.encoding
 
 from jax import jit
 
 from cgpax.utils import readable_cgp_program_from_genome, cgp_graph_from_genome, readable_lgp_program_from_genome, \
     lgp_graph_from_genome, cgp_expression_from_genome, lgp_expression_from_genome
-from cgpax.jax_encoding import genome_to_cgp_program, genome_to_lgp_program
+from cgpax.encoding import genome_to_cgp_program, genome_to_lgp_program
 from cgpax.run_utils import update_config_with_env_data
 
 

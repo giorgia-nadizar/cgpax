@@ -4,7 +4,7 @@ import sys
 import pandas as pd
 import wandb
 
-from cgpax.jax_functions import available_functions
+from cgpax.functions import available_functions
 from cgpax.run_utils import update_config_with_env_data, init_environment_from_config, config_to_run_name
 from cgpax.utils import compute_active_size, graph_from_genome, interpretability_from_genome
 
