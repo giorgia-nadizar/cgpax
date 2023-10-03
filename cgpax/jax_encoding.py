@@ -8,15 +8,15 @@ from cgpax.jax_functions import function_switch, constants
 
 
 @jit
-def __offset_copy__(idx: int, carry: Tuple[int, jnp.ndarray, jnp.ndarray]) -> Tuple[int, jnp.ndarray, jnp.ndarray]:
+def _offset_copy(idx: int, carry: Tuple[int, jnp.ndarray, jnp.ndarray]) -> Tuple[int, jnp.ndarray, jnp.ndarray]:
     offset, source, buffer = carry
     buffer = buffer.at[idx + offset].set(source.at[idx].get())
     return offset, source, buffer
 
 
 @jit
-def __update_buffer__(buffer_idx: int,
-                      carry: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]) -> Tuple[
+def _update_buffer(buffer_idx: int,
+                   carry: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]) -> Tuple[
     jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     x_genes, y_genes, f_genes, weights, buffer = carry
     n_in = len(buffer) - len(x_genes)
@@ -31,9 +31,8 @@ def __update_buffer__(buffer_idx: int,
 
 
 @jit
-def __update_register__(row_idx: int,
-                        carry: Tuple[
-                            jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int, jnp.ndarray]) -> \
+def _update_register(row_idx: int, carry: Tuple[
+    jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int, jnp.ndarray]) -> \
         Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int, jnp.ndarray]:
     lhs_genes, x_genes, y_genes, f_genes, weights, n_in, register = carry
     lhs_idx = lhs_genes.at[row_idx].get() + n_in
@@ -62,20 +61,20 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
     f_genes = f_genes.astype(int)
     out_genes = out_genes.astype(int)
 
-    def program(inputs: jnp.ndarray, buffer: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
+    def _program(inputs: jnp.ndarray, buffer: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
         # copy actual inputs
-        _, _, buffer = fori_loop(0, n_in_env, __offset_copy__, (0, inputs, buffer))
+        _, _, buffer = fori_loop(0, n_in_env, _offset_copy, (0, inputs, buffer))
         # copy constants
-        _, _, buffer = fori_loop(0, n_const, __offset_copy__, (n_in_env, constants, buffer))
+        _, _, buffer = fori_loop(0, n_const, _offset_copy, (n_in_env, constants, buffer))
 
-        _, _, _, _, buffer = fori_loop(n_in, len(buffer), __update_buffer__,
+        _, _, _, _, buffer = fori_loop(n_in, len(buffer), _update_buffer,
                                        (x_genes, y_genes, f_genes, weights, buffer))
         outputs = jnp.take(buffer, out_genes)
         bounded_outputs = outputs_wrapper(outputs)
 
         return buffer, bounded_outputs
 
-    return jit(program)
+    return jit(_program)
 
 
 def genome_to_lgp_program(genome: jnp.ndarray, config: Dict,
@@ -94,17 +93,17 @@ def genome_to_lgp_program(genome: jnp.ndarray, config: Dict,
     y_genes = y_genes.astype(int)
     f_genes = f_genes.astype(int)
 
-    def program(inputs: jnp.ndarray, register: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
+    def _program(inputs: jnp.ndarray, register: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
         register = jnp.zeros(n_registers)
         # copy actual environment inputs
-        _, _, register = fori_loop(0, n_in_env, __offset_copy__, (0, inputs, register))
+        _, _, register = fori_loop(0, n_in_env, _offset_copy, (0, inputs, register))
         # copy constant inputs
-        _, _, register = fori_loop(0, n_const, __offset_copy__, (n_in_env, constants, register))
-        _, _, _, _, _, _, register = fori_loop(0, n_rows, __update_register__,
+        _, _, register = fori_loop(0, n_const, _offset_copy, (n_in_env, constants, register))
+        _, _, _, _, _, _, register = fori_loop(0, n_rows, _update_register,
                                                (lhs_genes, x_genes, y_genes, f_genes, weights, n_in, register))
         outputs = jnp.take(register, output_positions)
         bounded_outputs = outputs_wrapper(outputs)
 
         return register, bounded_outputs
 
-    return jit(program)
+    return jit(_program)
