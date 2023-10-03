@@ -38,18 +38,18 @@ def compute_active_graph(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jn
     active = np.zeros(n_in + n_nodes)
     active[:n_in] = True
     for i in out_genes:
-        __compute_active_graph__(active, x_genes, y_genes, f_genes, n_in, i)
+        _compute_active_graph(active, x_genes, y_genes, f_genes, n_in, i)
     return active
 
 
-def __compute_active_graph__(active: np.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray,
-                             n_in: int, idx: int) -> None:
+def _compute_active_graph(active: np.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray,
+                          n_in: int, idx: int) -> None:
     if not active[idx]:
         active[idx] = True
-        __compute_active_graph__(active, x_genes, y_genes, f_genes, n_in, int(x_genes[idx - n_in]))
+        _compute_active_graph(active, x_genes, y_genes, f_genes, n_in, int(x_genes[idx - n_in]))
         arity = list(available_functions.values())[f_genes[idx - n_in]].arity
         if arity > 1:
-            __compute_active_graph__(active, x_genes, y_genes, f_genes, n_in, int(y_genes[idx - n_in]))
+            _compute_active_graph(active, x_genes, y_genes, f_genes, n_in, int(y_genes[idx - n_in]))
 
 
 def cgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
@@ -59,22 +59,22 @@ def cgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
         [n_nodes, 2 * n_nodes, 3 * n_nodes, 3 * n_nodes + n_out]))
     target = ""
     for i, out in enumerate(out_genes):
-        target = target + f"o{i} = {__replace_cgp_expression__(x_genes.astype(int), y_genes.astype(int), f_genes.astype(int), n_in, out)}\n"
+        target = target + f"o{i} = {_replace_cgp_expression(x_genes.astype(int), y_genes.astype(int), f_genes.astype(int), n_in, out)}\n"
     return target
 
 
-def __replace_cgp_expression__(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, n_in: int,
-                               idx: int) -> str:
+def _replace_cgp_expression(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray, n_in: int,
+                            idx: int) -> str:
     if idx < n_in:
         return f"i{idx}"
     functions = list(available_functions.values())
     gene_idx = idx - n_in
     function = functions[f_genes[gene_idx]]
     if function.arity == 1:
-        return f"{function.symbol}({__replace_cgp_expression__(x_genes, y_genes, f_genes, n_in, int(x_genes[gene_idx]))})"
+        return f"{function.symbol}({_replace_cgp_expression(x_genes, y_genes, f_genes, n_in, int(x_genes[gene_idx]))})"
     else:
-        return f"({__replace_cgp_expression__(x_genes, y_genes, f_genes, n_in, int(x_genes[gene_idx]))}" \
-               f"{function.symbol}{__replace_cgp_expression__(x_genes, y_genes, f_genes, n_in, int(y_genes[gene_idx]))})"
+        return f"({_replace_cgp_expression(x_genes, y_genes, f_genes, n_in, int(x_genes[gene_idx]))}" \
+               f"{function.symbol}{_replace_cgp_expression(x_genes, y_genes, f_genes, n_in, int(y_genes[gene_idx]))})"
 
 
 def lgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
@@ -83,21 +83,21 @@ def lgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     target = ""
     for output_id in range(config["n_out"]):
         register_id = config["n_registers"] - config["n_out"] + output_id
-        target = target + f"o{output_id} = {__replace_lgp_expression__(lhs_genes.astype(int), x_genes.astype(int), y_genes.astype(int), f_genes.astype(int), register_id, len(lhs_genes), config['n_in'])}\n"
+        target = target + f"o{output_id} = {_replace_lgp_expression(lhs_genes.astype(int), x_genes.astype(int), y_genes.astype(int), f_genes.astype(int), register_id, len(lhs_genes), config['n_in'])}\n"
     return target
 
 
-def __replace_lgp_expression__(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray,
-                               register_number: int, max_row_id: int, n_in: int) -> str:
+def _replace_lgp_expression(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes: jnp.ndarray,
+                            register_number: int, max_row_id: int, n_in: int) -> str:
     for row_id in range(max_row_id - 1, -1, -1):
         if int(lhs_genes[row_id]) == register_number:
             function = list(available_functions.values())[f_genes[row_id]]
             if function.arity == 1:
-                return f"{function.symbol}({__replace_lgp_expression__(lhs_genes, x_genes, y_genes, f_genes, int(x_genes[row_id]), row_id, n_in)})"
+                return f"{function.symbol}({_replace_lgp_expression(lhs_genes, x_genes, y_genes, f_genes, int(x_genes[row_id]), row_id, n_in)})"
             else:
-                return f"({__replace_lgp_expression__(lhs_genes, x_genes, y_genes, f_genes, int(x_genes[row_id]), row_id, n_in)}" \
+                return f"({_replace_lgp_expression(lhs_genes, x_genes, y_genes, f_genes, int(x_genes[row_id]), row_id, n_in)}" \
                        f"{function.symbol}" \
-                       f"{__replace_lgp_expression__(lhs_genes, x_genes, y_genes, f_genes, int(y_genes[row_id]), row_id, n_in)})"
+                       f"{_replace_lgp_expression(lhs_genes, x_genes, y_genes, f_genes, int(y_genes[row_id]), row_id, n_in)})"
     return f"i{register_number}" if register_number < n_in else "0"
 
 
@@ -134,22 +134,22 @@ def compute_coding_lines(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: 
     for row_id in range(config["n_rows"] - 1, -1, -1):
         if int(lhs_genes[row_id]) in output_registers:
             output_registers.remove(int(lhs_genes[row_id]))
-            __compute_coding_lines__(active, lhs_genes, x_genes, y_genes, f_genes, row_id)
+            _compute_coding_lines(active, lhs_genes, x_genes, y_genes, f_genes, row_id)
     return active
 
 
-def __compute_coding_lines__(active: np.ndarray, lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray,
-                             f_genes: jnp.ndarray, row_id: int) -> None:
+def _compute_coding_lines(active: np.ndarray, lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray,
+                          f_genes: jnp.ndarray, row_id: int) -> None:
     active[row_id] = True
     for new_row_id in range(row_id - 1, -1, -1):
         if lhs_genes.at[new_row_id].get() == x_genes.at[row_id].get():
-            __compute_coding_lines__(active, lhs_genes, x_genes, y_genes, f_genes, new_row_id)
+            _compute_coding_lines(active, lhs_genes, x_genes, y_genes, f_genes, new_row_id)
             break
     arity = list(available_functions.values())[f_genes.at[row_id].get()].arity
     if arity > 1:
         for new_row_id in range(row_id - 1, -1, -1):
             if lhs_genes.at[new_row_id].get() == y_genes.at[row_id].get():
-                __compute_coding_lines__(active, lhs_genes, x_genes, y_genes, f_genes, new_row_id)
+                _compute_coding_lines(active, lhs_genes, x_genes, y_genes, f_genes, new_row_id)
                 break
 
 
@@ -176,9 +176,9 @@ def readable_lgp_program_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     return text_function
 
 
-def __reassign_variables__(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, lhs_ids: List,
-                           x_ids: List, y_ids: List, row_id: int, register_number: int,
-                           variable_name: str) -> Tuple[List[str], List[str], List[str]]:
+def _reassign_variables(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_genes: jnp.ndarray, lhs_ids: List,
+                        x_ids: List, y_ids: List, row_id: int, register_number: int,
+                        variable_name: str) -> Tuple[List[str], List[str], List[str]]:
     current_row_id = row_id
     while current_row_id > 0:
         current_row_id -= 1
@@ -218,14 +218,14 @@ def lgp_graph_from_genome(genome: jnp.ndarray, config: Dict, x_color: str = "blu
             x_register = x_genes.at[row_id].get()
             x_name = f"g_{row_id}" if x_register > config["n_in"] else f"i_{x_register}"
             x_ids[row_id] = x_name
-            lhs_ids, x_ids, y_ids = __reassign_variables__(lhs_genes, x_genes, y_genes, lhs_ids, x_ids, y_ids,
-                                                           row_id, x_genes.at[row_id].get(), x_name)
+            lhs_ids, x_ids, y_ids = _reassign_variables(lhs_genes, x_genes, y_genes, lhs_ids, x_ids, y_ids,
+                                                        row_id, x_genes.at[row_id].get(), x_name)
             if function.arity > 1:
                 y_register = y_genes.at[row_id].get()
                 y_name = f"h_{row_id}" if y_register > config["n_in"] else f"i_{y_register}"
                 y_ids[row_id] = y_name
-                lhs_ids, x_ids, y_ids = __reassign_variables__(lhs_genes, x_genes, y_genes, lhs_ids, x_ids, y_ids,
-                                                               row_id, y_genes.at[row_id].get(), y_name)
+                lhs_ids, x_ids, y_ids = _reassign_variables(lhs_genes, x_genes, y_genes, lhs_ids, x_ids, y_ids,
+                                                            row_id, y_genes.at[row_id].get(), y_name)
             else:
                 y_ids[row_id] = None
             if int(lhs_genes.at[row_id].get()) in missing_outputs:
