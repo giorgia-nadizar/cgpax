@@ -4,8 +4,9 @@ import sys
 import pandas as pd
 import wandb
 
-from cgpax.run_utils import __update_config_with_env_data__, __init_environment_from_config__, __config_to_run_name__
-from cgpax.utils import compute_active_size
+from cgpax.jax_functions import available_functions
+from cgpax.run_utils import update_config_with_env_data, init_environment_from_config, config_to_run_name
+from cgpax.utils import compute_active_size, graph_from_genome, interpretability_from_genome
 
 import jax.numpy as jnp
 
@@ -31,8 +32,8 @@ if __name__ == '__main__':
                         process = True
                         break
                 if process:
-                    run_name, env_name, solver, ea, fitness, seed = __config_to_run_name__(wandb_run.config,
-                                                                                           wandb_run.created_at)
+                    run_name, env_name, solver, ea, fitness, seed = config_to_run_name(wandb_run.config,
+                                                                                       wandb_run.created_at)
                     wandb_run.name = run_name
                     wandb_run.update()
 
@@ -68,14 +69,17 @@ if __name__ == '__main__':
                                 file.name = file.name.replace("genomes/", "")
                                 file.download(root=target_dir)
 
-                        # compute graph sizes
+                        # compute graph sizes and intepretability measures
                         graph_sizes = []
-                        environment = __init_environment_from_config__(wandb_run.config)
-                        __update_config_with_env_data__(wandb_run.config, environment)
+                        interpretability_measures = []
+                        environment = init_environment_from_config(wandb_run.config)
+                        update_config_with_env_data(wandb_run.config, environment)
 
                         file_names = [f for f in os.listdir(f"{target_dir}/") if f != "config.yaml"]
                         for file_name in file_names:
                             genome = jnp.load(f"{target_dir}/{file_name}", allow_pickle=True).astype(int)
+
+                            # info on graph size
                             graph_size, max_size = compute_active_size(genome, wandb_run.config)
                             info = file_name.split("_")
                             seed = info[0] if wandb_run.config.get("n_parallel_runs", 0) > 1 else wandb_run.config[
@@ -88,12 +92,46 @@ if __name__ == '__main__':
                                 "graph_size": graph_size,
                                 "max_size": max_size
                             })
+                            # info on interpretability
+                            graph = graph_from_genome(genome, wandb_run.config)
+                            single_arity = 0
+                            double_arity = 0
+                            n_inputs = 0
+                            for node in graph.iternodes():
+                                if "_" in node:
+                                    if node.startswith("i_"):
+                                        n_inputs += 1
+                                    continue
+                                node_symbol = node.split(" ")[0]
+                                if node_symbol in [x.symbol for x in available_functions.values() if x.arity == 1]:
+                                    single_arity += 1
+                                else:
+                                    double_arity += 1
+                            phi = interpretability_from_genome(genome, wandb_run.config)
+                            interpretability_measures.append({
+                                "seed": str(seed),
+                                "generation": generation,
+                                "evaluation": generation * wandb_run.config["n_individuals"],
+                                "n_edges": graph.number_of_edges(),
+                                "phi": phi,
+                                "n_single_arity": single_arity,
+                                "n_double_arity": double_arity,
+                                "n_inputs": n_inputs
+                            })
+
                         graph_df = pd.DataFrame.from_dict(graph_sizes)
                         graph_df["solver"] = solver
                         graph_df["ea"] = ea
                         graph_df["fitness"] = fitness
                         graph_df["environment"] = env_name
                         graph_df.to_csv(f"data/graph_size/{run_name}.csv")
+
+                        interpretability_df = pd.DataFrame.from_dict(interpretability_measures)
+                        interpretability_df["solver"] = solver
+                        interpretability_df["ea"] = ea
+                        interpretability_df["fitness"] = fitness
+                        interpretability_df["environment"] = env_name
+                        interpretability_df.to_csv(f"data/interpretability/{run_name}.csv")
 
     if flag in ["all", "rl"]:
         counter = 0
