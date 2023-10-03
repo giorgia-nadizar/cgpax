@@ -25,7 +25,7 @@ from cgpax.jax_tracker import Tracker
 from cgpax.utils import identity
 
 
-def __init_environment__(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> EpisodeWrapper:
+def init_environment(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> EpisodeWrapper:
     if env_name == "miniant":
         env = functools.partial(ant.Ant, use_contact_forces=False)(terminate_when_unhealthy=terminate_when_unhealthy)
     else:
@@ -37,12 +37,12 @@ def __init_environment__(env_name: str, episode_length: int, terminate_when_unhe
     return env
 
 
-def __init_environment_from_config__(config: Dict) -> EpisodeWrapper:
-    return __init_environment__(config["problem"]["environment"], config["problem"]["episode_length"],
-                                config.get("unhealthy_termination", True))
+def init_environment_from_config(config: Dict) -> EpisodeWrapper:
+    return init_environment(config["problem"]["environment"], config["problem"]["episode_length"],
+                            config.get("unhealthy_termination", True))
 
 
-def __init_environments__(config: Dict) -> List[Dict]:
+def init_environments(config: Dict) -> List[Dict]:
     n_steps = config["problem"]["incremental_steps"]
     min_duration = config["problem"]["min_length"]
     step_size = (config["problem"]["episode_length"] - min_duration) / (n_steps - 1)
@@ -50,9 +50,9 @@ def __init_environments__(config: Dict) -> List[Dict]:
     return [
         {
             "start_gen": gen_step_size * n,
-            "env": __init_environment__(env_name=config["problem"]["environment"],
-                                        episode_length=(min_duration + int(step_size * n))
-                                        ),
+            "env": init_environment(env_name=config["problem"]["environment"],
+                                    episode_length=(min_duration + int(step_size * n))
+                                    ),
             "fitness_scaler": config["problem"]["episode_length"] / (min_duration + int(step_size * n)),
             "duration": (min_duration + int(step_size * n))
         }
@@ -60,7 +60,7 @@ def __init_environments__(config: Dict) -> List[Dict]:
     ]
 
 
-def __update_config_with_data__(config: Dict, observation_space_size: int, action_space_size: int) -> None:
+def update_config_with_data(config: Dict, observation_space_size: int, action_space_size: int) -> None:
     """Updates the config dictionary based on the provided values."""
     config["n_functions"] = len(available_functions)
     config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
@@ -80,11 +80,11 @@ def __update_config_with_data__(config: Dict, observation_space_size: int, actio
         config["genome_size"] = 5 * config["n_rows"]
 
 
-def __update_config_with_env_data__(config: Dict, env) -> None:
-    __update_config_with_data__(config, env.observation_size, env.action_size)
+def update_config_with_env_data(config: Dict, env) -> None:
+    update_config_with_data(config, env.observation_size, env.action_size)
 
 
-def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, n_elites: int = 1) -> jnp.ndarray:
+def compute_parallel_runs_indexes(n_individuals: int, n_parallel_runs: int, n_elites: int = 1) -> jnp.ndarray:
     indexes = jnp.zeros((n_parallel_runs, n_individuals))
     for run_idx in range(n_parallel_runs):
         for elite_idx in range(n_elites):
@@ -95,7 +95,7 @@ def __compute_parallel_runs_indexes__(n_individuals: int, n_parallel_runs: int, 
     return indexes.astype(int)
 
 
-def __compile_genome_evaluation__(config: Dict, env: EpisodeWrapper, episode_length: int) -> Callable:
+def compile_genome_evaluation(config: Dict, env: EpisodeWrapper, episode_length: int) -> Callable:
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
     else:
@@ -109,7 +109,7 @@ def __compile_genome_evaluation__(config: Dict, env: EpisodeWrapper, episode_len
     return jit(vmap_evaluate_genome)
 
 
-def __compile_crossover__(config: Dict) -> Union[Callable, None]:
+def compile_crossover(config: Dict) -> Union[Callable, None]:
     if config.get("crossover", False) and config["solver"] == "lgp":
         vmap_crossover = vmap(lgp_one_point_crossover_genomes, in_axes=(0, 0, 0))
         return jit(vmap_crossover)
@@ -117,10 +117,10 @@ def __compile_crossover__(config: Dict) -> Union[Callable, None]:
         return None
 
 
-def __compile_mutation__(config: Dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
-                         weights_mutation_function: Callable[[random.PRNGKey], jnp.ndarray],
-                         genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray],
-                         n_mutations_per_individual: int = 1) -> Callable:
+def compile_mutation(config: Dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
+                     weights_mutation_function: Callable[[random.PRNGKey], jnp.ndarray],
+                     genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray],
+                     n_mutations_per_individual: int = 1) -> Callable:
     if config["mutation"] == "standard":
         partial_multiple_mutations = partial(mutate_genome_n_times, n_mutations=n_mutations_per_individual,
                                              genome_mask=genome_mask, mutation_mask=mutation_mask,
@@ -136,7 +136,7 @@ def __compile_mutation__(config: Dict, genome_mask: jnp.ndarray, mutation_mask: 
     return jit(vmap_multiple_mutations)
 
 
-def __compile_survival_selection__(config: Dict) -> Union[Callable, None]:
+def compile_survival_selection(config: Dict) -> Union[Callable, None]:
     if config["survival"] == "parents":
         return None
     elif config["survival"] == "truncation":
@@ -148,7 +148,7 @@ def __compile_survival_selection__(config: Dict) -> Union[Callable, None]:
         return jit(partial(fp_selection, n_elites=config["selection"]["elite_size"]))
 
 
-def __compile_parents_selection__(config: Dict, n_parents: int = 0) -> Callable:
+def compile_parents_selection(config: Dict, n_parents: int = 0) -> Callable:
     if n_parents == 0:
         n_parents = config["n_individuals"] - config["selection"]["elite_size"]
     if config["selection"]["type"] == "truncation":
@@ -162,7 +162,7 @@ def __compile_parents_selection__(config: Dict, n_parents: int = 0) -> Callable:
     if config.get("n_parallel_runs", 1) == 1:
         return inner_selection
     else:
-        def composite_selection(genomes, fitness_values, select_key):
+        def _composite_selection(genomes, fitness_values, select_key):
             parents_list = []
             for run_idx in config["runs_indexes"]:
                 rnd_key, sel_key = random.split(select_key, 2)
@@ -171,10 +171,10 @@ def __compile_parents_selection__(config: Dict, n_parents: int = 0) -> Callable:
             parents_matrix = jnp.array(parents_list)
             return jnp.reshape(parents_matrix, (-1, parents_matrix.shape[-1]))
 
-        return composite_selection
+        return _composite_selection
 
 
-def __compute_masks__(config: Dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
+def compute_masks(config: Dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
     if config["solver"] == "cgp":
         genome_mask = compute_cgp_genome_mask(config, config["n_in"], config["n_out"])
         mutation_mask = compute_cgp_mutation_prob_mask(config, config["n_out"])
@@ -184,24 +184,24 @@ def __compute_masks__(config: Dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
     return genome_mask, mutation_mask
 
 
-def __compute_weights_mutation_function__(config: Dict) -> Callable[[random.PRNGKey], jnp.ndarray]:
+def compute_weights_mutation_function(config: Dict) -> Callable[[random.PRNGKey], jnp.ndarray]:
     sigma = config.get("weights_sigma", 0.0)
     length = config.get("n_rows", config.get("n_nodes"))
 
-    def gaussian_function(rnd_key: random.PRNGKey) -> jnp.ndarray:
+    def _gaussian_function(rnd_key: random.PRNGKey) -> jnp.ndarray:
         return random.normal(key=rnd_key, shape=[length]) * sigma
 
-    return gaussian_function
+    return _gaussian_function
 
 
-def __compute_genome_transformation_function__(config: Dict) -> Callable[[jnp.ndarray], jnp.ndarray]:
+def compute_genome_transformation_function(config: Dict) -> Callable[[jnp.ndarray], jnp.ndarray]:
     if config["solver"] == "cgp" and config.get("levels_back") is not None:
         return levels_back_transformation_function(config["n_in"], config["n_nodes"])
     else:
         return identity
 
 
-def __init_tracking__(config: Dict, saving_interval: int = 100, store_fitness_details: List[str] = None) -> Tuple:
+def init_tracking(config: Dict, saving_interval: int = 100, store_fitness_details: List[str] = None) -> Tuple:
     if config.get("n_parallel_runs", 1) > 1:
         trackers = [Tracker(config, idx=k, saving_interval=saving_interval, store_fitness_details=store_fitness_details)
                     for k in range(config["n_parallel_runs"])]
@@ -214,8 +214,8 @@ def __init_tracking__(config: Dict, saving_interval: int = 100, store_fitness_de
         return tracker, tracker_state
 
 
-def __update_tracking__(config: Dict, tracking_objects: Tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
-                        rewards: jnp.ndarray, detailed_rewards: Dict, times: Dict, wdb_run: Run) -> Tuple:
+def update_tracking(config: Dict, tracking_objects: Tuple, genomes: jnp.ndarray, fitness_values: jnp.ndarray,
+                    rewards: jnp.ndarray, detailed_rewards: Dict, times: Dict, wdb_run: Run) -> Tuple:
     if config.get("n_parallel_runs", 1) == 1:
         tracker, tracker_state = tracking_objects
         tracker_state = tracker.update(
@@ -247,27 +247,27 @@ def __update_tracking__(config: Dict, tracking_objects: Tuple, genomes: jnp.ndar
         return trackers, tracker_states
 
 
-def __normalize_array__(array: jnp.ndarray) -> jnp.ndarray:
+def normalize_array(array: jnp.ndarray) -> jnp.ndarray:
     min_val = jnp.min(array)
     max_val = jnp.max(array)
     return (array - min_val) / (max_val - min_val)
 
 
 @jit
-def __compute_max_distance__(x_coord: float, x_pos_archive: jnp.ndarray) -> jnp.ndarray:
+def compute_max_distance(x_coord: float, x_pos_archive: jnp.ndarray) -> jnp.ndarray:
     @jit
-    def __distance__(x1: float, x2: float) -> float:
+    def _distance(x1: float, x2: float) -> float:
         return jnp.abs(x1 - x2)
 
-    distances = vmap(__distance__, in_axes=(None, 0))(x_coord, x_pos_archive)
+    distances = vmap(_distance, in_axes=(None, 0))(x_coord, x_pos_archive)
     return jnp.max(distances)
 
 
-def __compute_novelty_scores__(final_positions: jnp.ndarray, novelty_archive: Set, decimals: int = 2) -> jnp.ndarray:
+def compute_novelty_scores(final_positions: jnp.ndarray, novelty_archive: Set, decimals: int = 2) -> jnp.ndarray:
     x_coordinates = final_positions.at[:, :, 0].get()
     x_coordinates_flat = x_coordinates.flatten()
     archive_array = jnp.asarray(list(novelty_archive))
-    max_distances = vmap(__compute_max_distance__, in_axes=(0, None))(x_coordinates_flat, archive_array)
+    max_distances = vmap(compute_max_distance, in_axes=(0, None))(x_coordinates_flat, archive_array)
     max_distances = max_distances.reshape(x_coordinates.shape)
     rounded_positions = jnp.around(x_coordinates_flat, decimals=decimals)
     for pos in rounded_positions[~jnp.isnan(rounded_positions)]:
@@ -275,7 +275,7 @@ def __compute_novelty_scores__(final_positions: jnp.ndarray, novelty_archive: Se
     return max_distances
 
 
-def __config_to_run_name__(config: Dict, date: str = None):
+def config_to_run_name(config: Dict, date: str = None):
     if date is None:
         date = str(datetime.today())
     solver = config["solver"]
@@ -314,41 +314,41 @@ def __config_to_run_name__(config: Dict, date: str = None):
 
 # methods for update notifications
 
-async def __send_telegram_text__(bot: telegram.Bot, chat: str, text: str):
+async def send_telegram_text(bot: telegram.Bot, chat: str, text: str):
     await bot.send_message(chat, text=text)
 
 
-def __notify_update__(text: str, bot: telegram.Bot = None, chat: str = None):
+def notify_update(text: str, bot: telegram.Bot = None, chat: str = None):
     print(text)
     if bot and chat:
-        asyncio.get_event_loop().run_until_complete(__send_telegram_text__(bot, chat, text))
+        asyncio.get_event_loop().run_until_complete(send_telegram_text(bot, chat, text))
 
 
 # methods for configs management
 
-def __unnest_dictionary__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+def _unnest_dictionary(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
     nested_values = config[nesting_keyword]
     del config[nesting_keyword]
     return [config | x for x in nested_values]
 
 
-def __unnest_dictionary_recursive__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+def _unnest_dictionary_recursive(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
     nesting_keywords = [x for x in config.keys() if nesting_keyword in x]
     configs = [config]
     partially_unpacked_configs = []
     for keyword in nesting_keywords:
         for conf in configs:
-            partially_unpacked_configs += __unnest_dictionary__(conf, keyword)
+            partially_unpacked_configs += _unnest_dictionary(conf, keyword)
         configs = partially_unpacked_configs
         partially_unpacked_configs = []
     return configs
 
 
-def __unpack_dictionary__(config: Dict) -> List[Dict]:
+def _unpack_dictionary(config: Dict) -> List[Dict]:
     config_list = []
     for key, value in config.items():
         if type(value) == dict:
-            unpacked_value = __unpack_dictionary__(value)
+            unpacked_value = _unpack_dictionary(value)
             if len(unpacked_value) > 1:
                 config[key] = unpacked_value
     for key, value in config.items():
@@ -356,13 +356,13 @@ def __unpack_dictionary__(config: Dict) -> List[Dict]:
             for v in value:
                 temp_config = copy.deepcopy(config)
                 temp_config[key] = v
-                config_list += __unpack_dictionary__(temp_config)
+                config_list += _unpack_dictionary(temp_config)
             break
     if len(config_list) == 0:
         config_list.append(config)
     return [{key.replace("_list", ""): value for key, value in cfg.items()} for cfg in config_list]
 
 
-def __process_dictionary__(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
-    config_list = __unnest_dictionary_recursive__(config, nesting_keyword)
-    return list(reduce(lambda x, y: x + y, [__unpack_dictionary__(x) for x in config_list], []))
+def process_dictionary(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
+    config_list = _unnest_dictionary_recursive(config, nesting_keyword)
+    return list(reduce(lambda x, y: x + y, [_unpack_dictionary(x) for x in config_list], []))
