@@ -112,18 +112,6 @@ def lgp_one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray,
     return new_genome1, new_genome2
 
 
-def one_point_crossover_genomes(genome1: jnp.ndarray, genome2: jnp.ndarray,
-                                rnd_key: random.PRNGKey) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    assert len(genome1) == len(genome2)
-    rnd_key, xover_key = random.split(rnd_key, 2)
-    crossover_point = random.randint(xover_key, (1, 0), 0, len(genome1))
-    before = jnp.arange(0, crossover_point)
-    after = jnp.arange(crossover_point, len(genome1))
-    offspring1 = jnp.concatenate((genome1.take(before), genome2.take(after)))
-    offspring2 = jnp.concatenate((genome2.take(before), genome1.take(after)))
-    return offspring1, offspring2
-
-
 def mutate_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
                   weights_mutation_function: Callable[[random.PRNGKey], jnp.ndarray],
                   genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray] = identity,
@@ -146,7 +134,7 @@ def mutate_genome_n_times_stacked(genome: jnp.ndarray, rnd_key: random.PRNGKey, 
                                   weights_mutation_function: Callable[[random.PRNGKey], jnp.ndarray],
                                   genome_transformation_function: Callable[
                                       [jnp.ndarray], jnp.ndarray] = identity) -> jnp.ndarray:
-    def mutate_and_store(idx, carry):
+    def _mutate_and_store(idx, carry):
         genomes, genome, rnd_key = carry
         rnd_key, mutation_key = random.split(rnd_key, 2)
         new_genome = mutate_genome(genome, mutation_key, genome_mask, mutation_mask, weights_mutation_function,
@@ -155,7 +143,7 @@ def mutate_genome_n_times_stacked(genome: jnp.ndarray, rnd_key: random.PRNGKey, 
         return genomes, new_genome, rnd_key
 
     genomes = jnp.zeros((n_mutations, len(genome)), dtype=int)
-    mutated_genomes, _, _, _, _ = fori_loop(0, n_mutations, mutate_and_store, (genomes, genome, rnd_key))
+    mutated_genomes, _, _, _, _ = fori_loop(0, n_mutations, _mutate_and_store, (genomes, genome, rnd_key))
     return mutated_genomes
 
 
