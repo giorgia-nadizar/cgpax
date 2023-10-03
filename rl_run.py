@@ -14,7 +14,7 @@ from brax.v1.io import model
 from brax.training.agents.ppo import train as ppo
 from brax.training.agents.sac import train as sac
 
-from cgpax.run_utils import __unpack_dictionary__, __notify_update__
+from cgpax.run_utils import process_dictionary, notify_update
 
 
 def training_function(env: str, solver: str, seed: int) -> Callable:
@@ -103,9 +103,9 @@ if __name__ == '__main__':
     telegram_bot = telegram.Bot(telegram_config["token"])
 
     config_file = "configs/rl.yaml"
-    configs = __unpack_dictionary__(cgpax.get_config(config_file))
+    configs = process_dictionary(cgpax.get_config(config_file))
     for count, cfg in enumerate(configs):
         run_name = f'RL_{cfg["environment"]}_{cfg["rl"]["trainer"]}_{cfg["seed"]}'
-        __notify_update__(f"{count + 1}/{len(configs)} - {run_name} starting\n{cfg}", telegram_bot,
-                          telegram_config["chat_id"])
+        notify_update(f"{count + 1}/{len(configs)} - {run_name} starting\n{cfg}", telegram_bot,
+                      telegram_config["chat_id"])
         run(cfg, run_name)

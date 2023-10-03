@@ -14,11 +14,11 @@ from functools import partial
 
 from cgpax.jax_individual import generate_population
 
-from cgpax.run_utils import __update_config_with_env_data__, __compile_parents_selection__, __compile_mutation__, \
-    __init_environment_from_config__, __compute_parallel_runs_indexes__, __init_environments__, __compute_masks__, \
-    __compile_genome_evaluation__, __init_tracking__, __update_tracking__, __compute_genome_transformation_function__, \
-    __compile_survival_selection__, __compute_novelty_scores__, __normalize_array__, __compile_crossover__, \
-    __config_to_run_name__, __compute_weights_mutation_function__, __notify_update__, __process_dictionary__
+from cgpax.run_utils import update_config_with_env_data, compile_parents_selection, compile_mutation, \
+    init_environment_from_config, compute_parallel_runs_indexes, init_environments, compute_masks, \
+    compile_genome_evaluation, init_tracking, update_tracking, compute_genome_transformation_function, \
+    compile_survival_selection, compute_novelty_scores, normalize_array, compile_crossover, \
+    config_to_run_name, compute_weights_mutation_function, notify_update, process_dictionary
 
 
 def run(config: Dict, wandb_run: Run) -> None:
@@ -30,44 +30,44 @@ def run(config: Dict, wandb_run: Run) -> None:
         alpha = config["novelty"].get("alpha", 0.5)
 
     if config.get("n_parallel_runs", 1) > 1:
-        runs_indexes = __compute_parallel_runs_indexes__(config["n_individuals"], config["n_parallel_runs"])
+        runs_indexes = compute_parallel_runs_indexes(config["n_individuals"], config["n_parallel_runs"])
         config["runs_indexes"] = runs_indexes
 
     # incremental episode duration
     if config["problem"]["incremental_steps"] > 1:
-        environments = __init_environments__(config)
+        environments = init_environments(config)
         start_gens = [e["start_gen"] for e in environments]
         env_dict = environments[0]
         environment = env_dict["env"]
         fitness_scaler = env_dict["fitness_scaler"]
     else:
         environments, start_gens = None, None
-        environment = __init_environment_from_config__(config)
+        environment = init_environment_from_config(config)
         fitness_scaler = 1.0
-    __update_config_with_env_data__(config, environment)
+    update_config_with_env_data(config, environment)
     wandb.config.update(config, allow_val_change=True)
 
     # preliminary evo steps
-    genome_mask, mutation_mask = __compute_masks__(config)
-    weights_mutation_function = __compute_weights_mutation_function__(config)
-    genome_transformation_function = __compute_genome_transformation_function__(config)
+    genome_mask, mutation_mask = compute_masks(config)
+    weights_mutation_function = compute_weights_mutation_function(config)
+    genome_transformation_function = compute_genome_transformation_function(config)
 
     # compilation of functions
-    evaluate_genomes = __compile_genome_evaluation__(config, environment, config["problem"]["episode_length"])
-    select_parents = __compile_parents_selection__(config)
-    crossover_genomes = __compile_crossover__(config)
-    mutate_genomes = __compile_mutation__(config, genome_mask, mutation_mask, weights_mutation_function,
-                                          genome_transformation_function)
+    evaluate_genomes = compile_genome_evaluation(config, environment, config["problem"]["episode_length"])
+    select_parents = compile_parents_selection(config)
+    crossover_genomes = compile_crossover(config)
+    mutate_genomes = compile_mutation(config, genome_mask, mutation_mask, weights_mutation_function,
+                                      genome_transformation_function)
     replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
     replace_invalid_nan_zero = jit(partial(jnp.nan_to_num, nan=0))
-    select_survivals = __compile_survival_selection__(config)
+    select_survivals = compile_survival_selection(config)
 
     # initialize tracking
     store_fitness_details = config.get("store_fitness_details", [])
     store_fitness_details = store_fitness_details if isinstance(store_fitness_details, list) else [
         store_fitness_details]
-    tracking_objects = __init_tracking__(config, store_fitness_details=store_fitness_details,
-                                         saving_interval=config["saving_interval"])
+    tracking_objects = init_tracking(config, store_fitness_details=store_fitness_details,
+                                     saving_interval=config["saving_interval"])
 
     rnd_key, genome_key = random.split(rnd_key, 2)
     genomes = generate_population(pop_size=config["n_individuals"] * config.get("n_parallel_runs", 1),
@@ -84,7 +84,7 @@ def run(config: Dict, wandb_run: Run) -> None:
             env_dict = environments[env_idx]
             environment = env_dict["env"]
             fitness_scaler = env_dict["fitness_scaler"]
-            evaluate_genomes = __compile_genome_evaluation__(config, environment, env_dict["duration"])
+            evaluate_genomes = compile_genome_evaluation(config, environment, env_dict["duration"])
 
         # evaluate population
         rnd_key, *eval_keys = random.split(rnd_key, len(genomes) + 1)
@@ -98,10 +98,10 @@ def run(config: Dict, wandb_run: Run) -> None:
         }
 
         if novelty_archive is not None:
-            novelty_values = __compute_novelty_scores__(evaluation_outcomes["feet_contact_proportion"], novelty_archive)
+            novelty_values = compute_novelty_scores(evaluation_outcomes["feet_contact_proportion"], novelty_archive)
             novelty_values = replace_invalid_nan_zero(novelty_values)
-            normalized_reward = __normalize_array__(reward_values)
-            normalized_novelty = __normalize_array__(novelty_values)
+            normalized_reward = normalize_array(reward_values)
+            normalized_novelty = normalize_array(novelty_values)
             fitness_values = alpha * normalized_reward + (1 - alpha) * normalized_novelty
         elif config.get("distance", False):
             distances = evaluation_outcomes["x_distance"]
@@ -162,7 +162,7 @@ def run(config: Dict, wandb_run: Run) -> None:
             f"FITNESS: {jnp.max(fitness_values)}"
         )
 
-        tracking_objects = __update_tracking__(
+        tracking_objects = update_tracking(
             config=config,
             tracking_objects=tracking_objects,
             genomes=genomes,
@@ -196,16 +196,16 @@ if __name__ == '__main__':
     unpacked_configs = []
 
     for config_file in config_files:
-        unpacked_configs += __process_dictionary__(cgpax.get_config(config_file))
+        unpacked_configs += process_dictionary(cgpax.get_config(config_file))
 
-    __notify_update__(f"Total configs found: {len(unpacked_configs)}", telegram_bot, telegram_config["chat_id"])
+    notify_update(f"Total configs found: {len(unpacked_configs)}", telegram_bot, telegram_config["chat_id"])
     for count, cfg in enumerate(unpacked_configs):
-        run_name, _, _, _, _, _ = __config_to_run_name__(cfg)
+        run_name, _, _, _, _, _ = config_to_run_name(cfg)
         if run_name in existing_run_names:
-            __notify_update__(f"{count + 1}/{len(unpacked_configs)} - {run_name} already exists")
+            notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} already exists")
             continue
-        __notify_update__(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
-                          telegram_config["chat_id"])
+        notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
+                      telegram_config["chat_id"])
         wb_run = wandb.init(config=cfg, project=project, name=run_name)
         run(cfg, wb_run)
         wb_run.finish()
