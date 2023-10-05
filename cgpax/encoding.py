@@ -8,13 +8,6 @@ from cgpax.functions import function_switch, constants
 
 
 @jit
-def _offset_copy(idx: int, carry: Tuple[int, jnp.ndarray, jnp.ndarray]) -> Tuple[int, jnp.ndarray, jnp.ndarray]:
-    offset, source, buffer = carry
-    buffer = buffer.at[idx + offset].set(source.at[idx].get())
-    return offset, source, buffer
-
-
-@jit
 def _update_buffer(buffer_idx: int,
                    carry: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]) -> Tuple[
     jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
@@ -48,7 +41,6 @@ def _update_register(row_idx: int, carry: Tuple[
 
 def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
                           outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh) -> Callable:
-    n_in_env = config["n_in_env"]
     n_const = config["n_constants"]
     n_in = config["n_in"]
     n_out = config["n_out"]
@@ -62,11 +54,7 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
     out_genes = out_genes.astype(int)
 
     def _program(inputs: jnp.ndarray, buffer: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
-        # copy actual inputs
-        _, _, buffer = fori_loop(0, n_in_env, _offset_copy, (0, inputs, buffer))
-        # copy constants
-        _, _, buffer = fori_loop(0, n_const, _offset_copy, (n_in_env, constants, buffer))
-
+        buffer = jnp.concatenate([inputs, constants[:n_const], buffer[n_in:len(buffer)]])
         _, _, _, _, buffer = fori_loop(n_in, len(buffer), _update_buffer,
                                        (x_genes, y_genes, f_genes, weights, buffer))
         outputs = jnp.take(buffer, out_genes)
@@ -95,10 +83,7 @@ def genome_to_lgp_program(genome: jnp.ndarray, config: Dict,
 
     def _program(inputs: jnp.ndarray, register: jnp.ndarray) -> (jnp.ndarray, jnp.ndarray):
         register = jnp.zeros(n_registers)
-        # copy actual environment inputs
-        _, _, register = fori_loop(0, n_in_env, _offset_copy, (0, inputs, register))
-        # copy constant inputs
-        _, _, register = fori_loop(0, n_const, _offset_copy, (n_in_env, constants, register))
+        register = jnp.concatenate([inputs, constants[:n_const], register[n_in:len(register)]])
         _, _, _, _, _, _, register = fori_loop(0, n_rows, _update_register,
                                                (lhs_genes, x_genes, y_genes, f_genes, weights, n_in, register))
         outputs = jnp.take(register, output_positions)
