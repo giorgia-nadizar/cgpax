@@ -67,7 +67,6 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
 
 def genome_to_lgp_program(genome: jnp.ndarray, config: Dict,
                           outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh) -> Callable:
-    n_in_env = config["n_in_env"]
     n_const = config["n_constants"]
     n_in = config["n_in"]
     n_out = config["n_out"]
