@@ -1,5 +1,5 @@
 theme: jekyll-theme-slate
 title: "Interpretable Control Policies via Graph-based Genetic Programming"
 
-url: 'https://anondoubleblind.github.io/' # your main domain
-baseurl: 'gp-control/'
+url: 'https://giorgia-nadizar.github.io/' # your main domain
+baseurl: 'cgpax/'
