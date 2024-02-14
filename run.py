@@ -12,7 +12,7 @@ from jax import random
 
 from functools import partial
 
-from cgpax.jax_individual import generate_population
+from cgpax.individual import generate_population
 
 from cgpax.run_utils import update_config_with_env_data, compile_parents_selection, compile_mutation, \
     init_environment_from_config, compute_parallel_runs_indexes, init_environments, compute_masks, \
