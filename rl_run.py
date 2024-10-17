@@ -3,13 +3,13 @@ import os
 from typing import Dict, Callable
 
 import telegram
-from brax.v1.envs import ant
+from brax.envs import ant
 from jax import default_backend
 
 import cgpax
 import wandb
-from brax.v1 import envs
-from brax.v1.io import model
+from brax import envs
+from brax.io import model
 
 from brax.training.agents.ppo import train as ppo
 from brax.training.agents.sac import train as sac
