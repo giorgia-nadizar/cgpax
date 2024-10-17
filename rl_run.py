@@ -97,7 +97,8 @@ def run(config: Dict, run_name: str):
 
 
 if __name__ == '__main__':
-    assert default_backend() == "gpu"
+
+    print(f"Starting the run with {default_backend()} as backend...")
 
     telegram_config = cgpax.get_config("telegram/token.yaml")
     telegram_bot = telegram.Bot(telegram_config["token"])
