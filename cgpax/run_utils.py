@@ -17,12 +17,12 @@ import jax.numpy as jnp
 from cgpax.evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times
 from cgpax.functions import available_functions, constants
-from cgpax.individual import mutate_genome_n_times, mutate_genome_n_times_stacked, compute_cgp_genome_mask, \
-    compute_cgp_mutation_prob_mask, compute_lgp_genome_mask, compute_lgp_mutation_prob_mask, \
-    levels_back_transformation_function, lgp_one_point_crossover_genomes
 from cgpax.selection import truncation_selection, tournament_selection, fp_selection, composed_selection
 from cgpax.tracker import Tracker
+from cgpax.standard import individual
+from cgpax.standard.individual import levels_back_transformation_function
 from cgpax.utils import identity
+from cgpax.weighted import encoding_weighted, individual_weighted
 
 
 def init_environment(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> EpisodeWrapper:
@@ -98,39 +98,61 @@ def compute_parallel_runs_indexes(n_individuals: int, n_parallel_runs: int, n_el
 def compile_genome_evaluation(config: Dict, env: EpisodeWrapper, episode_length: int) -> Callable:
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
+        w_encoding_func = encoding_weighted.genome_to_cgp_program
     else:
         eval_func, eval_n_times_func = evaluate_lgp_genome, evaluate_lgp_genome_n_times
+        w_encoding_func = encoding_weighted.genome_to_lgp_program
     if config["n_evals_per_individual"] == 1:
         partial_eval_genome = partial(eval_func, config=config, env=env, episode_length=episode_length)
     else:
         partial_eval_genome = partial(eval_n_times_func, config=config, env=env,
                                       n_times=config["n_evals_per_individual"], episode_length=episode_length)
+
+    if config.get("weighted_connections", False):
+        partial_eval_genome = partial(partial_eval_genome, genome_encoder=w_encoding_func)
+
     vmap_evaluate_genome = vmap(partial_eval_genome, in_axes=(0, 0))
     return jit(vmap_evaluate_genome)
 
 
 def compile_crossover(config: Dict) -> Union[Callable, None]:
     if config.get("crossover", False) and config["solver"] == "lgp":
-        vmap_crossover = vmap(lgp_one_point_crossover_genomes, in_axes=(0, 0, 0))
+        xover_func = individual_weighted.lgp_one_point_crossover_genomes \
+            if config.get("weighted_connections", False) else individual.lgp_one_point_crossover_genomes
+        vmap_crossover = vmap(xover_func, in_axes=(0, 0, 0))
         return jit(vmap_crossover)
     else:
         return None
 
 
 def compile_mutation(config: Dict, genome_mask: jnp.ndarray, mutation_mask: jnp.ndarray,
-                     weights_mutation_function: Callable[[random.PRNGKey], jnp.ndarray],
                      genome_transformation_function: Callable[[jnp.ndarray], jnp.ndarray],
                      n_mutations_per_individual: int = 1) -> Callable:
-    if config["mutation"] == "standard":
-        partial_multiple_mutations = partial(mutate_genome_n_times, n_mutations=n_mutations_per_individual,
-                                             genome_mask=genome_mask, mutation_mask=mutation_mask,
-                                             weights_mutation_function=weights_mutation_function,
-                                             genome_transformation_function=genome_transformation_function)
+    if config.get("weighted_connections", False):
+        weights_mutation_function = compute_weights_mutation_function(config)
+        if config["mutation"] == "standard":
+            partial_multiple_mutations = partial(individual_weighted.mutate_genome_n_times,
+                                                 n_mutations=n_mutations_per_individual,
+                                                 genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                                 weights_mutation_function=weights_mutation_function,
+                                                 genome_transformation_function=genome_transformation_function)
+        else:
+            partial_multiple_mutations = partial(individual_weighted.mutate_genome_n_times_stacked,
+                                                 n_mutations=n_mutations_per_individual,
+                                                 genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                                 weights_mutation_function=weights_mutation_function,
+                                                 genome_transformation_function=genome_transformation_function)
     else:
-        partial_multiple_mutations = partial(mutate_genome_n_times_stacked, n_mutations=n_mutations_per_individual,
-                                             genome_mask=genome_mask, mutation_mask=mutation_mask,
-                                             weights_mutation_function=weights_mutation_function,
-                                             genome_transformation_function=genome_transformation_function)
+        if config["mutation"] == "standard":
+            partial_multiple_mutations = partial(individual.mutate_genome_n_times,
+                                                 n_mutations=n_mutations_per_individual,
+                                                 genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                                 genome_transformation_function=genome_transformation_function)
+        else:
+            partial_multiple_mutations = partial(individual.mutate_genome_n_times_stacked,
+                                                 n_mutations=n_mutations_per_individual,
+                                                 genome_mask=genome_mask, mutation_mask=mutation_mask,
+                                                 genome_transformation_function=genome_transformation_function)
 
     vmap_multiple_mutations = vmap(partial_multiple_mutations)
     return jit(vmap_multiple_mutations)
@@ -175,16 +197,27 @@ def compile_parents_selection(config: Dict, n_parents: int = 0) -> Callable:
 
 
 def compute_masks(config: Dict) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    if config["solver"] == "cgp":
-        genome_mask = compute_cgp_genome_mask(config, config["n_in"], config["n_out"])
-        mutation_mask = compute_cgp_mutation_prob_mask(config, config["n_out"])
+    if config.get("weighted_connections", False):
+        if config["solver"] == "cgp":
+            genome_mask = individual_weighted.compute_cgp_genome_mask(config, config["n_in"], config["n_out"])
+            mutation_mask = individual_weighted.compute_cgp_mutation_prob_mask(config, config["n_out"])
+        else:
+            genome_mask = individual_weighted.compute_lgp_genome_mask(config, config["n_in"])
+            mutation_mask = individual_weighted.compute_lgp_mutation_prob_mask(config)
     else:
-        genome_mask = compute_lgp_genome_mask(config, config["n_in"])
-        mutation_mask = compute_lgp_mutation_prob_mask(config)
+        if config["solver"] == "cgp":
+            genome_mask = individual.compute_cgp_genome_mask(config, config["n_in"], config["n_out"])
+            mutation_mask = individual.compute_cgp_mutation_prob_mask(config, config["n_out"])
+        else:
+            genome_mask = individual.compute_lgp_genome_mask(config, config["n_in"])
+            mutation_mask = individual.compute_lgp_mutation_prob_mask(config)
     return genome_mask, mutation_mask
 
 
-def compute_weights_mutation_function(config: Dict) -> Callable[[random.PRNGKey], jnp.ndarray]:
+def compute_weights_mutation_function(config: Dict) -> Union[Callable[[random.PRNGKey], jnp.ndarray], None]:
+    if not config.get("weighted_connections"):
+        return None
+
     sigma = config.get("weights_sigma", 0.0)
     length = config.get("n_rows", config.get("n_nodes"))
 

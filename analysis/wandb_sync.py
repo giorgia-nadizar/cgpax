@@ -6,7 +6,7 @@ import wandb
 
 from cgpax.functions import available_functions
 from cgpax.run_utils import update_config_with_env_data, init_environment_from_config, config_to_run_name
-from cgpax.utils import compute_active_size, graph_from_genome, interpretability_from_genome
+from cgpax.standard.visuals import compute_active_size, graph_from_genome, interpretability_from_genome
 
 import jax.numpy as jnp
 

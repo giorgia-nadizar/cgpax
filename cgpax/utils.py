@@ -16,16 +16,35 @@ def identity(x: Any, *args) -> Any:
     return x
 
 
-def compute_active_size(genome: jnp.ndarray, config: Dict) -> Tuple[int, int]:
-    if config["solver"] == "cgp":
-        n_nodes = config["n_nodes"]
-        n_out = config["n_out"]
+def _cgp_split_genome(genome: jnp.ndarray, config: Dict
+                      ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    n_nodes = config["n_nodes"]
+    n_out = config["n_out"]
+    if config.get("weighted_connections", False):
         x_genes, y_genes, f_genes, out_genes, weights = jnp.split(genome, jnp.asarray(
             [n_nodes, 2 * n_nodes, 3 * n_nodes, 3 * n_nodes + n_out]))
+    else:
+        x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray(
+            [n_nodes, 2 * n_nodes, 2 * n_nodes + n_out]))
+    return x_genes, y_genes, f_genes, out_genes
+
+
+def _lgp_split_genome(genome: jnp.ndarray, config: Dict
+                      ) -> Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
+    if config.get("weighted_connections", False):
+        lhs_genes, x_genes, y_genes, f_genes, weights = jnp.split(genome, 5)
+    else:
+        lhs_genes, x_genes, y_genes, f_genes = jnp.split(genome, 4)
+    return lhs_genes, x_genes, y_genes, f_genes
+
+
+def compute_active_size(genome: jnp.ndarray, config: Dict) -> Tuple[int, int]:
+    if config["solver"] == "cgp":
+        x_genes, y_genes, f_genes, out_genes = _cgp_split_genome(genome, config)
         active = compute_active_graph(x_genes.astype(int), y_genes.astype(int), f_genes.astype(int),
                                       out_genes.astype(int), config)
     else:
-        lhs_genes, x_genes, y_genes, f_genes, weights = jnp.split(genome, 5)
+        lhs_genes, x_genes, y_genes, f_genes = _lgp_split_genome(genome, config)
         lhs_genes += config["n_in"]
         active = compute_coding_lines(lhs_genes.astype(int), x_genes.astype(int), y_genes.astype(int),
                                       f_genes.astype(int), config)
@@ -54,10 +73,8 @@ def _compute_active_graph(active: np.ndarray, x_genes: jnp.ndarray, y_genes: jnp
 
 
 def cgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
-    n_in, n_out = config["n_in"], config["n_out"]
-    n_nodes = config["n_nodes"]
-    x_genes, y_genes, f_genes, out_genes, weights = jnp.split(genome, jnp.asarray(
-        [n_nodes, 2 * n_nodes, 3 * n_nodes, 3 * n_nodes + n_out]))
+    n_in = config["n_in"]
+    x_genes, y_genes, f_genes, out_genes = _cgp_split_genome(genome, config)
     target = ""
     for i, out in enumerate(out_genes):
         target = target + f"o{i} = {_replace_cgp_expression(x_genes.astype(int), y_genes.astype(int), f_genes.astype(int), n_in, out)}\n"
@@ -79,7 +96,7 @@ def _replace_cgp_expression(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes:
 
 
 def lgp_expression_from_genome(genome: jnp.ndarray, config: Dict) -> str:
-    lhs_genes, x_genes, y_genes, f_genes, weights = jnp.split(genome, 5)
+    lhs_genes, x_genes, y_genes, f_genes = _lgp_split_genome(genome, config)
     lhs_genes += config["n_in"]
     target = ""
     for output_id in range(config["n_out"]):
@@ -103,10 +120,8 @@ def _replace_lgp_expression(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_gene
 
 
 def readable_cgp_program_from_genome(genome: jnp.ndarray, config: Dict) -> str:
-    n_in, n_out = config["n_in"], config["n_out"]
-    n_nodes = config["n_nodes"]
-    x_genes, y_genes, f_genes, out_genes, weights = jnp.split(genome, jnp.asarray(
-        [n_nodes, 2 * n_nodes, 3 * n_nodes, 3 * n_nodes + n_out]))
+    n_in = config["n_in"]
+    x_genes, y_genes, f_genes, out_genes = _cgp_split_genome(genome, config)
     active = compute_active_graph(x_genes.astype(int), y_genes.astype(int), f_genes.astype(int), out_genes.astype(int),
                                   config)
     functions = list(available_functions.values())
@@ -155,7 +170,7 @@ def _compute_coding_lines(active: np.ndarray, lhs_genes: jnp.ndarray, x_genes: j
 
 
 def readable_lgp_program_from_genome(genome: jnp.ndarray, config: Dict) -> str:
-    lhs_genes, x_genes, y_genes, f_genes, weights = jnp.split(genome, 5)
+    lhs_genes, x_genes, y_genes, f_genes = _lgp_split_genome(genome, config)
     lhs_genes += config["n_in"]
     functions = list(available_functions.values())
     text_function = f"def program(inputs, r):\n" \

@@ -12,7 +12,8 @@ from jax import random
 
 from functools import partial
 
-from cgpax.individual import generate_population
+from cgpax.standard import individual
+from cgpax.weighted import individual_weighted
 
 from cgpax.run_utils import update_config_with_env_data, compile_parents_selection, compile_mutation, \
     init_environment_from_config, compute_parallel_runs_indexes, init_environments, compute_masks, \
@@ -56,8 +57,7 @@ def run(config: Dict, wandb_run: Run) -> None:
     evaluate_genomes = compile_genome_evaluation(config, environment, config["problem"]["episode_length"])
     select_parents = compile_parents_selection(config)
     crossover_genomes = compile_crossover(config)
-    mutate_genomes = compile_mutation(config, genome_mask, mutation_mask, weights_mutation_function,
-                                      genome_transformation_function)
+    mutate_genomes = compile_mutation(config, genome_mask, mutation_mask, genome_transformation_function)
     replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
     replace_invalid_nan_zero = jit(partial(jnp.nan_to_num, nan=0))
     select_survivals = compile_survival_selection(config)
@@ -70,10 +70,16 @@ def run(config: Dict, wandb_run: Run) -> None:
                                      saving_interval=config["saving_interval"])
 
     rnd_key, genome_key = random.split(rnd_key, 2)
-    genomes = generate_population(pop_size=config["n_individuals"] * config.get("n_parallel_runs", 1),
-                                  genome_mask=genome_mask, rnd_key=genome_key,
-                                  weights_mutation_function=weights_mutation_function,
-                                  genome_transformation_function=genome_transformation_function)
+    if config.get("weighted_connections"):
+        genomes = individual_weighted.generate_population(
+            pop_size=config["n_individuals"] * config.get("n_parallel_runs", 1),
+            genome_mask=genome_mask, rnd_key=genome_key,
+            weights_mutation_function=weights_mutation_function,
+            genome_transformation_function=genome_transformation_function)
+    else:
+        genomes = individual.generate_population(pop_size=config["n_individuals"] * config.get("n_parallel_runs", 1),
+                                                 genome_mask=genome_mask, rnd_key=genome_key,
+                                                 genome_transformation_function=genome_transformation_function)
 
     times = {}
     # evolutionary loop

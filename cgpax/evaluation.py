@@ -4,7 +4,7 @@ from typing import Callable, Dict, Tuple, Any
 from brax.envs import State
 from brax.envs.wrappers import EpisodeWrapper
 
-from cgpax.encoding import genome_to_cgp_program, genome_to_lgp_program
+from cgpax.standard.encoding import genome_to_cgp_program, genome_to_lgp_program
 
 from jax import lax, jit, vmap
 from jax import random
@@ -139,32 +139,17 @@ def evaluate_lgp_genome_n_times(genome: jnp.ndarray, rnd_key: random.PRNGKey, co
 
 def evaluate_cgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: Dict, env: EpisodeWrapper,
                         episode_length: int = 1000,
-                        inner_evaluator: Callable = _evaluate_program_light_tracking) -> Dict:
-    return inner_evaluator(genome_to_cgp_program(genome, config), config["buffer_size"], rnd_key, env,
+                        inner_evaluator: Callable = _evaluate_program_light_tracking,
+                        genome_encoder: Callable = genome_to_cgp_program
+                        ) -> Dict:
+    return inner_evaluator(genome_encoder(genome, config), config["buffer_size"], rnd_key, env,
                            episode_length)
 
 
 def evaluate_lgp_genome(genome: jnp.ndarray, rnd_key: random.PRNGKey, config: Dict, env: EpisodeWrapper,
                         episode_length: int = 1000,
-                        inner_evaluator: Callable = _evaluate_program_light_tracking) -> Dict:
-    return inner_evaluator(genome_to_lgp_program(genome, config), config["n_registers"], rnd_key, env,
+                        inner_evaluator: Callable = _evaluate_program_light_tracking,
+                        genome_encoder: Callable = genome_to_lgp_program
+                        ) -> Dict:
+    return inner_evaluator(genome_encoder(genome, config), config["n_registers"], rnd_key, env,
                            episode_length)
-
-
-def evaluate_cgp_genome_regression(genome: jnp.ndarray, config: Dict, observations: jnp.ndarray,
-                                   targets: jnp.ndarray) -> float:
-    def predict_row(observation: jnp.ndarray, genome: jnp.ndarray, config: Dict) -> jnp.ndarray:
-        program = genome_to_cgp_program(genome, config)
-        _, y_tilde = program(observation, jnp.zeros(config["buffer_size"]))
-        return y_tilde
-
-    partial_predict = partial(predict_row, genome=genome, config=config)
-    vmap_predict = vmap(partial_predict)
-    predicted_targets = vmap_predict(observations)
-    predicted_targets = jnp.reshape(predicted_targets, targets.shape)
-    print(predicted_targets)
-    print(targets)
-    delta_squared = jnp.square(targets - predicted_targets)
-    total_delta = jnp.sum(delta_squared)
-    mse = total_delta / targets.size
-    return jnp.sqrt(mse)
