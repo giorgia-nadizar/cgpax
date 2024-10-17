@@ -6,9 +6,9 @@ from functools import partial, reduce
 from typing import List, Callable, Tuple, Dict, Union, Set
 
 import telegram
-from brax.v1 import envs
-from brax.v1.envs import ant
-from brax.v1.envs.wrappers import EpisodeWrapper
+from brax import envs
+from brax.envs import ant
+from brax.envs.wrappers import EpisodeWrapper
 from wandb.apis.public import Run
 
 from jax import vmap, jit, random

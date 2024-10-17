@@ -1,8 +1,8 @@
 from functools import partial
 from typing import Callable, Dict, Tuple, Any
 
-from brax.v1.envs import State
-from brax.v1.envs.wrappers import EpisodeWrapper
+from brax.envs import State
+from brax.envs.wrappers import EpisodeWrapper
 
 from cgpax.encoding import genome_to_cgp_program, genome_to_lgp_program
 
