@@ -9,6 +9,7 @@ import telegram
 from brax import envs
 from brax.envs import ant
 from brax.envs.wrappers import EpisodeWrapper
+from scipy.cluster.hierarchy import weighted
 from wandb.apis.public import Run
 
 from jax import vmap, jit, random
@@ -68,16 +69,17 @@ def update_config_with_data(config: Dict, observation_space_size: int, action_sp
     config["n_in_env"] = observation_space_size
     config["n_in"] = config["n_in_env"] + config["n_constants"]
     config["n_out"] = action_space_size
+    weighted_connections = config.get("weighted_connections", False)
 
     if config["solver"] == "cgp":
         config["buffer_size"] = config["n_in"] + config["n_nodes"]
-        config["genome_size"] = 4 * config["n_nodes"] + config["n_out"]
+        config["genome_size"] = config["n_nodes"] * (4 if weighted_connections else 3) + config["n_out"]
         levels_back = config.get("levels_back")
         if levels_back is not None and levels_back < config["n_in"]:
             config["levels_back"] = config["n_in"]
     else:
         config["n_registers"] = config["n_in"] + config["n_extra_registers"] + config["n_out"]
-        config["genome_size"] = 5 * config["n_rows"]
+        config["genome_size"] = config["n_rows"] * (5 if weighted_connections else 4)
 
 
 def update_config_with_env_data(config: Dict, env) -> None:

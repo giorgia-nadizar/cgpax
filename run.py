@@ -70,7 +70,7 @@ def run(config: Dict, wandb_run: Run) -> None:
                                      saving_interval=config["saving_interval"])
 
     rnd_key, genome_key = random.split(rnd_key, 2)
-    if config.get("weighted_connections"):
+    if config.get("weighted_connections", False):
         genomes = individual_weighted.generate_population(
             pop_size=config["n_individuals"] * config.get("n_parallel_runs", 1),
             genome_mask=genome_mask, rnd_key=genome_key,
