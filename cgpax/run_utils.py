@@ -329,7 +329,7 @@ def notify_update(text: str, bot: telegram.Bot = None, chat: str = None):
 def _unnest_dictionary(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
     nested_values = config[nesting_keyword]
     del config[nesting_keyword]
-    return [config | x for x in nested_values]
+    return [dict(config, **x) for x in nested_values]
 
 
 def _unnest_dictionary_recursive(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
