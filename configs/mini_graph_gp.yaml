@@ -1,0 +1,30 @@
+backend: positional
+constrain_outputs: true
+mutation: standard
+n_evals_per_individual: 5
+n_individuals: 100
+n_parallel_runs: 1
+nan_replacement: -100000.0
+distance: false
+p_mut_functions: 0.1
+recursive: false
+selection:
+  elite_size: 10
+  tour_size: 3
+  type: tournament
+survival: truncation
+unhealthy_termination: true
+use_input_constants: true
+saving_interval: 100
+seed: [ 100 ]
+store_fitness_details_list: [ healthy, ctrl, forward ]
+n_nodes: 50
+p_mut_inputs: 0.1
+p_mut_outputs: 0.3
+solver: cgp
+problem:
+environment: inverted_pendulum
+episode_length: 1000
+incremental_steps: 1
+maximize: true
+n_generations: 10

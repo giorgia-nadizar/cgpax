@@ -6,7 +6,7 @@ import jax.numpy as jnp
 from jax import random
 from jax.lax import fori_loop
 
-from cgpax.standard.visuals import identity
+from cgpax.utils import identity
 
 
 def compute_cgp_mutation_prob_mask(config: Dict, n_out: int) -> jnp.ndarray:
