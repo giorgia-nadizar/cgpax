@@ -25,7 +25,7 @@ def _cgp_split_genome(genome: jnp.ndarray, config: Dict
             [n_nodes, 2 * n_nodes, 3 * n_nodes, 3 * n_nodes + n_out]))
     else:
         x_genes, y_genes, f_genes, out_genes = jnp.split(genome, jnp.asarray(
-            [n_nodes, 2 * n_nodes, 2 * n_nodes + n_out]))
+            [n_nodes, 2 * n_nodes, 3 * n_nodes]))
     return x_genes, y_genes, f_genes, out_genes
 
 

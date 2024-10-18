@@ -44,7 +44,7 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
     n_out = config["n_out"]
     n_nodes = config["n_nodes"]
 
-    x_genes, y_genes, f_genes, out_genes = jnp.split(genome, [n_nodes, 2 * n_nodes, 2 * n_nodes + n_out])
+    x_genes, y_genes, f_genes, out_genes = jnp.split(genome, [n_nodes, 2 * n_nodes, 3 * n_nodes])
     x_genes = x_genes.astype(int)
     y_genes = y_genes.astype(int)
     f_genes = f_genes.astype(int)
