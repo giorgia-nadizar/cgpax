@@ -2,7 +2,7 @@ from copy import deepcopy
 from functools import partial
 
 import jax.numpy as jnp
-from typing import List, Tuple, Callable
+from typing import List, Tuple, Callable, Union
 
 from jax import random, jit
 import random as rnd
@@ -19,13 +19,16 @@ def parallel_gom(
         fitnesses: jnp.ndarray,
         fos: List[List[int]],
         eval_fn: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray],
-        rnd_key: random.PRNGKey
-) -> Tuple[jnp.ndarray, jnp.ndarray]:
+        rnd_key: random.PRNGKey,
+        track_fitnesses: bool = False,
+        intermediate_prints: bool = False
+) -> Union[Tuple[jnp.ndarray, jnp.ndarray], Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]]:
     mutation_fn = partial(_gom_mutate, donors=donors)
     array_fos = [jnp.asarray(f) for f in fos]
     shuffled_fos = [rnd.sample(array_fos, len(array_fos)) for _ in donors]
 
     genotypes = deepcopy(donors)
+    fitnesses_history = []
 
     for f_idx in range(len(array_fos)):
         rnd_key, *mutate_keys = random.split(rnd_key, len(donors) + 1)
@@ -38,4 +41,11 @@ def parallel_gom(
         genotypes = jnp.where((offspring_fitnesses > fitnesses)[:, None], offspring_genotypes, genotypes)
         fitnesses = jnp.where(offspring_fitnesses > fitnesses, offspring_fitnesses, fitnesses)
 
-    return genotypes, fitnesses
+        if intermediate_prints:
+            print(f"\t {f_idx} \t FITNESS: {jnp.max(fitnesses)}")
+        fitnesses_history.append(jnp.max(fitnesses))
+
+    if track_fitnesses:
+        return genotypes, fitnesses, jnp.asarray(fitnesses_history)
+    else:
+        return genotypes, fitnesses
