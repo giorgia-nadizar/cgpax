@@ -25,7 +25,8 @@ def _nearest_neighbor(idx: int, s_matrix: jnp.ndarray, n_indices: jnp.ndarray, m
 
 
 # https://github.com/marcovirgolin/gpg/blob/pybind/src/fos.hpp#L284
-def compute_fos(normalized_information_matrix: jnp.ndarray, rnd_key: random.PRNGKey) -> List:
+def compute_fos(normalized_information_matrix: jnp.ndarray, rnd_key: random.PRNGKey,
+                ignore_full_list: bool = True) -> List:
     n_entries = normalized_information_matrix.shape[0]
     rnd_key, permutation_key = random.split(rnd_key)
     random_order = random.permutation(permutation_key, n_entries)
@@ -127,7 +128,7 @@ def compute_fos(normalized_information_matrix: jnp.ndarray, rnd_key: random.PRNG
             if mpm_length == 1:
                 done = True
 
-    return h_cluster
+    return [c for c in h_cluster if len(c) < n_entries] if ignore_full_list else h_cluster
 
 
 def compute_normalized_mutual_information_matrix(
