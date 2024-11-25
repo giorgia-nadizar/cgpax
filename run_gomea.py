@@ -53,7 +53,7 @@ def run(config: Dict, wandb_run: Run) -> None:
     genomes = individual.generate_population(pop_size=config["n_individuals"],
                                              genome_mask=genome_mask, rnd_key=genome_key,
                                              genome_transformation_function=genome_transformation_function)
-    n_inner_iterations = len(genomes[0]) - 2
+    n_inner_iterations = 2 * len(genomes[0]) - 2
     print(f"N GOMEA ITERATIONS: {n_inner_iterations}")
     bias_matrix = None  # init needed for gom
 
@@ -68,9 +68,9 @@ def run(config: Dict, wandb_run: Run) -> None:
         f"FITNESS: {jnp.max(fitnesses)} \t "
         f"E: {eval_time:.2f} \t"
     )
-    with open(f"results/{run_name}.csv", "a") as csv_file:
-        csv_file.write("iteration,fitness,time")
-        csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}")
+    with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
+        csv_file.write("iteration,fitness,time\n")
+        csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
     times = {}
     # evolutionary loop
@@ -81,7 +81,7 @@ def run(config: Dict, wandb_run: Run) -> None:
                                                                                bias_matrix)  # (genotype size, genotype size)
         print("NMI DONE")
         rnd_key, fos_key = random.split(rnd_key, 2)
-        fos = compute_fos(nmi_matrix, fos_key, ignore_full_list=True)  # genotype size - 2
+        fos = compute_fos(nmi_matrix, fos_key, ignore_full_list=True)  # 2 * genotype size - 2
         times["fos_time"] = time.process_time() - fos_start_time
         print("FOS DONE")
 
@@ -92,9 +92,9 @@ def run(config: Dict, wandb_run: Run) -> None:
         times["gom_time"] = time.process_time() - gom_start_time
         avg_gom_time = times["gom_time"] / n_inner_iterations
 
-        with open(f"results/{run_name}.csv", "a") as csv_file:
+        with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
             for fit_idx, fit_hist in enumerate(fitnesses_history):
-                csv_file.write(f"{_generation + fit_idx},{fit_hist},{avg_gom_time:.2f}")
+                csv_file.write(f"{_generation + fit_idx},{fit_hist},{avg_gom_time:.2f}\n")
 
         _generation += n_inner_iterations
 
@@ -138,8 +138,9 @@ if __name__ == '__main__':
     # notify_update(f"Total configs found: {len(unpacked_configs)}", telegram_bot, telegram_config["chat_id"])
     print(f"Total configs found: {len(unpacked_configs)}")
     for count, cfg in enumerate(unpacked_configs):
-        run_name, _, _, _, _, _ = config_to_run_name(cfg)
+        # run_name, _, _, _, _, _ = config_to_run_name(cfg)
         cfg["run_name"] = f"gomea_{cfg['solver']}_{cfg['problem']['environment']}_{cfg['seed']}"
+        print(cfg["run_name"])
         # if run_name in existing_run_names:
         #     notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} already exists")
         # continue
