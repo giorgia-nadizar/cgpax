@@ -14,16 +14,16 @@ saving_interval: 100
 seed: [0,1,2,3,4]
 #store_fitness_details_list: [ healthy, ctrl, forward ]
 
-n_nodes: 50
-p_mut_inputs: 0.1
-p_mut_outputs: 0.3
-solver: cgp
+#n_nodes: 50
+#p_mut_inputs: 0.1
+#p_mut_outputs: 0.3
+#solver: cgp
 #crossover: true
-#n_extra_registers: 5
-#n_rows: 15
+n_extra_registers: 5
+n_rows: 15
 #p_mut_lhs: 0.3
 #p_mut_rhs: 0.1
-#solver: lgp
+solver: lgp
 
 #problem:
 #  environment: inverted_double_pendulum
