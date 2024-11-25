@@ -136,9 +136,8 @@ def compute_normalized_mutual_information_matrix(
         config: Dict,
         bias_matrix: jnp.ndarray = None,
 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    # the preprocessing is needed because f genes represent different things from connection genes -> shift
     if config["solver"] == "cgp":
-
-        # the preprocessing is needed because f genes represent different things from connection genes -> shift
         n_nodes = config["n_nodes"]
         n_in = config["n_in"]
         n_connection_symbols = n_in + n_nodes
@@ -148,9 +147,18 @@ def compute_normalized_mutual_information_matrix(
         f_genes_shifted = f_genes + n_connection_symbols
         shifted_genomes = jnp.concatenate([xy_genes, f_genes_shifted, out_genes], axis=1)
 
-        return _compute_normalized_mutual_information_matrix(shifted_genomes, n_symbols, bias_matrix)
+    elif config["solver"] == "lgp":
+        lhs_genes, x_genes, y_genes, f_genes = jnp.split(genomes, 4, axis=1)
+        n_registers = config["n_registers"]
+        n_functions = config["n_functions"]
+        f_genes_shifted = f_genes + n_registers
+        n_symbols = n_registers + n_functions
+        shifted_genomes = jnp.concatenate([lhs_genes, x_genes, y_genes, f_genes_shifted], axis=1)
+
     else:
         raise NotImplementedError
+
+    return _compute_normalized_mutual_information_matrix(shifted_genomes, n_symbols, bias_matrix)
 
 
 def _compute_normalized_mutual_information_matrix(
