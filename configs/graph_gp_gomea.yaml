@@ -21,8 +21,8 @@ seed: [0,1,2,3,4]
 #crossover: true
 n_extra_registers: 5
 n_rows: 15
-#p_mut_lhs: 0.3
-#p_mut_rhs: 0.1
+p_mut_lhs: 0.3
+p_mut_rhs: 0.1
 solver: lgp
 
 #problem:
