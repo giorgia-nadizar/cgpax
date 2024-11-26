@@ -51,9 +51,21 @@ function_set_control = {
     "sqrt": JaxFunction(lambda x, y: jnp.sqrt(jnp.abs(x)), 1, "sqrt"),
 }
 
+function_set_boolean = {
+    "and": JaxFunction(lambda x, y: jnp.logical_and(x, y), 2, "and"),
+    "or": JaxFunction(lambda x, y: jnp.logical_or(x, y), 2, "or"),
+    "xor": JaxFunction(lambda x, y: jnp.logical_xor(x, y), 2, "xor"),
+    "and_not": JaxFunction(lambda x, y: jnp.logical_and(x, jnp.logical_not(y)), 2, "and_not"),
+}
+
 constants = jnp.asarray([0.1, 1])
 
 
 @jit
 def control_function_switch(idx, *operands):
     return switch(idx, list(function_set_control.values()), *operands)
+
+
+@jit
+def boolean_function_switch(idx, *operands):
+    return switch(idx, list(function_set_boolean.values()), *operands)
