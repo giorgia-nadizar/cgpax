@@ -86,6 +86,12 @@ def update_config_with_env_data(config: Dict, env) -> None:
     update_config_with_data(config, env.observation_size, env.action_size)
 
 
+def load_dataset(problem_name: str) -> Tuple[jnp.ndarray, jnp.ndarray]:
+    x_values = jnp.load(f"datasets/{problem_name}_x.npy")
+    y_values = jnp.load(f"datasets/{problem_name}_y.npy")
+    return x_values, y_values
+
+
 def compute_parallel_runs_indexes(n_individuals: int, n_parallel_runs: int, n_elites: int = 1) -> jnp.ndarray:
     indexes = jnp.zeros((n_parallel_runs, n_individuals))
     for run_idx in range(n_parallel_runs):
