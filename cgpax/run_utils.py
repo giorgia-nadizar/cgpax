@@ -17,7 +17,7 @@ import jax.numpy as jnp
 
 from cgpax.evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times
-from cgpax.functions import available_functions, constants
+from cgpax.functions import function_set_control, constants
 from cgpax.selection import truncation_selection, tournament_selection, fp_selection, composed_selection
 from cgpax.tracker import Tracker
 from cgpax.standard import individual
@@ -63,7 +63,7 @@ def init_environments(config: Dict) -> List[Dict]:
 
 def update_config_with_data(config: Dict, observation_space_size: int, action_space_size: int) -> None:
     """Updates the config dictionary based on the provided values."""
-    config["n_functions"] = len(available_functions)
+    config["n_functions"] = len(function_set_control)
     config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
 
     config["n_in_env"] = observation_space_size

@@ -36,7 +36,7 @@ class JaxFunction:
         return cls(aux_data["operator"], aux_data["arity"], aux_data["symbol"])
 
 
-available_functions = {
+function_set_control = {
     "plus": JaxFunction(lambda x, y: jnp.add(x, y), 2, "+"),
     "minus": JaxFunction(lambda x, y: jnp.add(x, -y), 2, "-"),
     "times": JaxFunction(lambda x, y: jnp.multiply(x, y), 2, "*"),
@@ -55,5 +55,5 @@ constants = jnp.asarray([0.1, 1])
 
 
 @jit
-def function_switch(idx, *operands):
-    return switch(idx, list(available_functions.values()), *operands)
+def control_function_switch(idx, *operands):
+    return switch(idx, list(function_set_control.values()), *operands)

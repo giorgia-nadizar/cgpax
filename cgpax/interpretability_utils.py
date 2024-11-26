@@ -1,7 +1,7 @@
 import re
 from typing import List
 
-from cgpax.functions import available_functions
+from cgpax.functions import function_set_control
 
 interpretability_weights = {
     "offset": 79.1,
@@ -23,7 +23,7 @@ def count_constants(formula: str) -> int:
 
 def count_operations(formula: str) -> int:
     operations = 0
-    for symbol in [x.symbol for x in available_functions.values()]:
+    for symbol in [x.symbol for x in function_set_control.values()]:
         operations += formula.count(symbol)
     return operations
 
@@ -34,7 +34,7 @@ def count_variables(formula: str) -> int:
 
 def count_non_arithmetic_operations(formula: str) -> int:
     operations = 0
-    non_arithmetic_symbols = [x.symbol for x in available_functions.values() if x.symbol not in arithmetic_symbols]
+    non_arithmetic_symbols = [x.symbol for x in function_set_control.values() if x.symbol not in arithmetic_symbols]
     for symbol in non_arithmetic_symbols:
         operations += formula.count(symbol)
     return operations
@@ -49,7 +49,7 @@ def _rec_conn_count(connection_lists: List[List[int]], ids_lists: List[int], tar
 
 def count_max_chained_non_arithmetic_operations(formula: str) -> int:
     non_arithmetical_positions = []
-    non_arithmetic_symbols = [x.symbol for x in available_functions.values() if x.symbol not in arithmetic_symbols]
+    non_arithmetic_symbols = [x.symbol for x in function_set_control.values() if x.symbol not in arithmetic_symbols]
     for symbol in non_arithmetic_symbols:
         non_arithmetical_positions.extend([m.start() for m in re.finditer(symbol, formula)])
     if len(non_arithmetical_positions) == 0:

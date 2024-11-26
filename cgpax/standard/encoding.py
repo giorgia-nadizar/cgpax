@@ -4,7 +4,7 @@ import jax.numpy as jnp
 from jax import jit
 from jax.lax import fori_loop
 
-from cgpax.functions import function_switch, constants
+from cgpax.functions import control_function_switch, constants
 
 
 @jit
@@ -18,7 +18,7 @@ def _update_buffer(buffer_idx: int,
     x_arg = buffer.at[x_genes.at[idx].get()].get()
     y_arg = buffer.at[y_genes.at[idx].get()].get()
 
-    buffer = buffer.at[buffer_idx].set(function_switch(f_idx, x_arg, y_arg))
+    buffer = buffer.at[buffer_idx].set(control_function_switch(f_idx, x_arg, y_arg))
     return x_genes, y_genes, f_genes, buffer
 
 
@@ -33,7 +33,7 @@ def _update_register(row_idx: int, carry: Tuple[
     x_arg = register.at[x_idx].get()
     y_idx = y_genes.at[row_idx].get()
     y_arg = register.at[y_idx].get()
-    register = register.at[lhs_idx].set(function_switch(f_idx, x_arg, y_arg))
+    register = register.at[lhs_idx].set(control_function_switch(f_idx, x_arg, y_arg))
     return lhs_genes, x_genes, y_genes, f_genes, n_in, register
 
 

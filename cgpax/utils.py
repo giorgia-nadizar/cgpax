@@ -5,7 +5,7 @@ import jax.numpy as jnp
 from jax import jit
 
 from cgpax.interpretability_utils import evaluate_interpretability
-from cgpax.functions import available_functions
+from cgpax.functions import function_set_control
 
 
 # import pygraphviz as pgv
@@ -67,7 +67,7 @@ def _compute_active_graph(active: np.ndarray, x_genes: jnp.ndarray, y_genes: jnp
     if not active[idx]:
         active[idx] = True
         _compute_active_graph(active, x_genes, y_genes, f_genes, n_in, int(x_genes[idx - n_in]))
-        arity = list(available_functions.values())[f_genes[idx - n_in]].arity
+        arity = list(function_set_control.values())[f_genes[idx - n_in]].arity
         if arity > 1:
             _compute_active_graph(active, x_genes, y_genes, f_genes, n_in, int(y_genes[idx - n_in]))
 
@@ -85,7 +85,7 @@ def _replace_cgp_expression(x_genes: jnp.ndarray, y_genes: jnp.ndarray, f_genes:
                             idx: int) -> str:
     if idx < n_in:
         return f"i{idx}"
-    functions = list(available_functions.values())
+    functions = list(function_set_control.values())
     gene_idx = idx - n_in
     function = functions[f_genes[gene_idx]]
     if function.arity == 1:
@@ -109,7 +109,7 @@ def _replace_lgp_expression(lhs_genes: jnp.ndarray, x_genes: jnp.ndarray, y_gene
                             register_number: int, max_row_id: int, n_in: int) -> str:
     for row_id in range(max_row_id - 1, -1, -1):
         if int(lhs_genes[row_id]) == register_number:
-            function = list(available_functions.values())[f_genes[row_id]]
+            function = list(function_set_control.values())[f_genes[row_id]]
             if function.arity == 1:
                 return f"{function.symbol}({_replace_lgp_expression(lhs_genes, x_genes, y_genes, f_genes, int(x_genes[row_id]), row_id, n_in)})"
             else:
@@ -124,7 +124,7 @@ def readable_cgp_program_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     x_genes, y_genes, f_genes, out_genes = _cgp_split_genome(genome, config)
     active = compute_active_graph(x_genes.astype(int), y_genes.astype(int), f_genes.astype(int), out_genes.astype(int),
                                   config)
-    functions = list(available_functions.values())
+    functions = list(function_set_control.values())
     text_function = f"def program(inputs, buffer):\n" \
                     f"  buffer[{list(range(n_in))}] = inputs\n"
 
@@ -161,7 +161,7 @@ def _compute_coding_lines(active: np.ndarray, lhs_genes: jnp.ndarray, x_genes: j
         if lhs_genes.at[new_row_id].get() == x_genes.at[row_id].get():
             _compute_coding_lines(active, lhs_genes, x_genes, y_genes, f_genes, new_row_id)
             break
-    arity = list(available_functions.values())[f_genes.at[row_id].get()].arity
+    arity = list(function_set_control.values())[f_genes.at[row_id].get()].arity
     if arity > 1:
         for new_row_id in range(row_id - 1, -1, -1):
             if lhs_genes.at[new_row_id].get() == y_genes.at[row_id].get():
@@ -172,7 +172,7 @@ def _compute_coding_lines(active: np.ndarray, lhs_genes: jnp.ndarray, x_genes: j
 def readable_lgp_program_from_genome(genome: jnp.ndarray, config: Dict) -> str:
     lhs_genes, x_genes, y_genes, f_genes = _lgp_split_genome(genome, config)
     lhs_genes += config["n_in"]
-    functions = list(available_functions.values())
+    functions = list(function_set_control.values())
     text_function = f"def program(inputs, r):\n" \
                     f"  r[{list(range(config['n_in']))}] = inputs\n"
 
