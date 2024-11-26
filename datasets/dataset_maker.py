@@ -9,7 +9,7 @@ for a in [0, 1]:
             for d in [0, 1]:
                 inputs_list.append([a, b, c, d])
 inputs = jnp.asarray(inputs_list)
-jnp.save(f"{file_path}_inputs.npy", inputs)
+jnp.save(f"datasets/{file_path}_x.npy", inputs)
 
 outputs_list = [
     [0, 0, 0],
@@ -30,4 +30,4 @@ outputs_list = [
     [1, 1, 0],
 ]
 outputs = jnp.asarray(outputs_list)
-jnp.save(f"{file_path}_outputs.npy", outputs)
+jnp.save(f"datasets/{file_path}_y.npy", outputs)
