@@ -15,7 +15,7 @@ from wandb.apis.public import Run
 from jax import vmap, jit, random
 import jax.numpy as jnp
 
-from cgpax.evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
+from cgpax.control_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times
 from cgpax.functions import function_set_control, constants
 from cgpax.selection import truncation_selection, tournament_selection, fp_selection, composed_selection
