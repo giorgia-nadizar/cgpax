@@ -61,14 +61,14 @@ def init_environments(config: Dict) -> List[Dict]:
     ]
 
 
-def update_config_with_data(config: Dict, observation_space_size: int, action_space_size: int) -> None:
+def update_config_with_data(config: Dict, input_space_size: int, output_space_size: int) -> None:
     """Updates the config dictionary based on the provided values."""
     config["n_functions"] = len(function_set_control)
     config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
 
-    config["n_in_env"] = observation_space_size
+    config["n_in_env"] = input_space_size
     config["n_in"] = config["n_in_env"] + config["n_constants"]
-    config["n_out"] = action_space_size
+    config["n_out"] = output_space_size
     weighted_connections = config.get("weighted_connections", False)
 
     if config["solver"] == "cgp":
