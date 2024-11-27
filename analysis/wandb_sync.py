@@ -4,7 +4,7 @@ import sys
 import pandas as pd
 import wandb
 
-from cgpax.functions import available_functions
+from cgpax.functions import function_set_control
 from cgpax.run_utils import update_config_with_env_data, init_environment_from_config, config_to_run_name
 from cgpax.standard.visuals import compute_active_size, graph_from_genome, interpretability_from_genome
 
@@ -103,7 +103,7 @@ if __name__ == '__main__':
                                         n_inputs += 1
                                     continue
                                 node_symbol = node.split(" ")[0]
-                                if node_symbol in [x.symbol for x in available_functions.values() if x.arity == 1]:
+                                if node_symbol in [x.symbol for x in function_set_control.values() if x.arity == 1]:
                                     single_arity += 1
                                 else:
                                     double_arity += 1
