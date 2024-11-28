@@ -61,9 +61,10 @@ def init_environments(config: Dict) -> List[Dict]:
     ]
 
 
-def update_config_with_data(config: Dict, input_space_size: int, output_space_size: int) -> None:
+def update_config_with_data(config: Dict, input_space_size: int, output_space_size: int,
+                            function_set: Dict = function_set_control) -> None:
     """Updates the config dictionary based on the provided values."""
-    config["n_functions"] = len(function_set_control)
+    config["n_functions"] = len(function_set)
     config["n_constants"] = len(constants) if config.get("use_input_constants", True) else 0
 
     config["n_in_env"] = input_space_size
