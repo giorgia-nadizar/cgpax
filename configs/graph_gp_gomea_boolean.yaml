@@ -32,6 +32,6 @@ nested0:
 #  incremental_steps: 1
 #  maximize: true
 n_generations: 5000
-problem: two_bit_adder
+problem: [ two_bit_adder, two_bit_multiplier ]
 early_stop: true
 target_fitness: 1
