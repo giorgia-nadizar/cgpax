@@ -23,3 +23,20 @@ token: abc
 chat_id: 012
 ```
 More info on telegram bots and their creation is available at [https://core.telegram.org/bots/tutorial](https://core.telegram.org/bots/tutorial).
+
+## Non-JAX version
+This project does not natively support non-Jax environments.
+A simple version of this project edited to work with non-Jax environments is available at [https://github.com/giorgia-nadizar/MarioGP-T](https://github.com/giorgia-nadizar/MarioGP-T).
+
+## Citation
+If you use this code in your research paper please cite:
+```
+@inproceedings{nadizar2024naturally,
+  title={Naturally Interpretable Control Policies via Graph-Based Genetic Programming},
+  author={Nadizar, Giorgia and Medvet, Eric and Wilson, Dennis G},
+  booktitle={European Conference on Genetic Programming (Part of EvoStar)},
+  pages={73--89},
+  year={2024},
+  organization={Springer}
+}
+```
