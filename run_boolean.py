@@ -69,13 +69,18 @@ def run(config: Dict, wandb_run: Run) -> None:
         fitnesses = genomes_to_fitnesses(genomes)
         eval_time = time.time() - start_eval_time
         with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
-            csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
+            csv_file.write(f"{_generation},{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
         print(
             f"{_generation} \t"
             f"FITNESS: {jnp.max(fitnesses)} \t "
             f"E: {eval_time:.2f} \t"
         )
+
+        if (config.get("early_stop", False) and config.get("target_fitness", None) is not None and
+                jnp.max(fitnesses) >= config["target_fitness"]):
+            print(f"Fitness reached target of {config['target_fitness']}")
+            break
 
         # select parents
         rnd_key, select_key = random.split(rnd_key, 2)
