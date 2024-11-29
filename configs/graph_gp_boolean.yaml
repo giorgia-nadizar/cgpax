@@ -1,0 +1,41 @@
+backend: positional
+constrain_outputs: false
+mutation: standard
+n_evals_per_individual: 1 #5
+n_individuals: 100
+n_parallel_runs: 1
+nan_replacement: -100000.0
+distance: false
+p_mut_functions: 0.1
+recursive: false
+unhealthy_termination: true
+use_input_constants: false
+saving_interval: 100
+seed: [ 0,1,2,3,4 ]
+selection:
+  elite_size: 10
+  tour_size: 3
+  type: tournament
+survival: truncation
+
+nested0:
+  - n_nodes: 50
+    p_mut_inputs: 0.1
+    p_mut_outputs: 0.3
+    solver: cgp
+  - crossover: true
+    n_extra_registers: 5
+    n_rows: 15
+    p_mut_lhs: 0.3
+    p_mut_rhs: 0.1
+    solver: lgp
+
+#problem:
+#  environment: inverted_double_pendulum
+#  episode_length: 1000
+#  incremental_steps: 1
+#  maximize: true
+n_generations: 5000
+problem: [ two_bit_adder, two_bit_multiplier ]
+early_stop: true
+target_fitness: 1
