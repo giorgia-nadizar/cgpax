@@ -38,8 +38,8 @@ def two_bits_adder():
     jnp.save(f"datasets/{file_path}_y.npy", outputs)
 
 
-def two_bits_multiplier():
-    file_path = "two_bits_multiplier"
+def two_bit_multiplier():
+    file_path = "two_bit_multiplier"
 
     jnp.save(f"datasets/{file_path}_x.npy", two_bits_input())
 
@@ -66,4 +66,4 @@ def two_bits_multiplier():
 
 
 if __name__ == '__main__':
-    two_bits_multiplier()
+    two_bit_multiplier()
