@@ -167,6 +167,7 @@ if __name__ == '__main__':
         #     continue
         notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
                       telegram_config["chat_id"])
+        cfg["run_name"] = run_name
         # wb_run = wandb.init(config=cfg, project=project, name=run_name)
         # run(cfg, wb_run)
         run(cfg, None)
