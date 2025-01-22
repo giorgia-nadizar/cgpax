@@ -33,7 +33,6 @@ def run(config: Dict, wandb_run: Run) -> None:
 
     # preliminary evo steps
     genome_mask, mutation_mask = compute_masks(config)
-    weights_mutation_function = compute_weights_mutation_function(config)
     genome_transformation_function = compute_genome_transformation_function(config)
 
     # compilation of functions
@@ -42,7 +41,6 @@ def run(config: Dict, wandb_run: Run) -> None:
     crossover_genomes = compile_crossover(config)
     mutate_genomes = compile_mutation(config, genome_mask, mutation_mask, genome_transformation_function)
     replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
-    replace_invalid_nan_zero = jit(partial(jnp.nan_to_num, nan=0))
     select_survivals = compile_survival_selection(config)
 
     # initialize tracking
@@ -67,9 +65,9 @@ def run(config: Dict, wandb_run: Run) -> None:
         rnd_key, *eval_keys = random.split(rnd_key, len(genomes) + 1)
         start_eval = time.process_time()
         evaluation_outcomes = evaluate_genomes(genomes, jnp.array(eval_keys))
-        # culumative_rewards = evaluation_outcomes["cum_reward"]
-        culumative_rewards = evaluation_outcomes
-        reward_values = replace_invalid_nan_reward(culumative_rewards)
+        # cumulative_rewards = evaluation_outcomes["cum_reward"]
+        cumulative_rewards = evaluation_outcomes
+        reward_values = replace_invalid_nan_reward(cumulative_rewards)
         # detailed_rewards = {
         #     "healthy": evaluation_outcomes["cum_healthy_reward"],
         #     "ctrl": evaluation_outcomes["cum_ctrl_reward"],
