@@ -1,8 +1,10 @@
+import copy
 from functools import partial
 from typing import Callable, Dict, Tuple, Any
 
 from brax.envs import State
 from brax.envs.wrappers import EpisodeWrapper
+from gymnasium import Env
 
 from cgpax.standard.encoding import genome_to_cgp_program, genome_to_lgp_program
 
@@ -110,6 +112,23 @@ def _evaluate_program_detailed_tracking(program: Callable, program_state_size: i
     return _evaluate_program(program, program_state_size, rnd_key, env, episode_length,
                              _init_detailed_rewards_carry, _update_detailed_rewards_carry,
                              _extract_final_detailed_rewards_carry)
+
+
+def evaluate_program_gymnasium(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
+                               model_env: Env, episode_length: int = 1000) -> Dict:
+    env = copy.deepcopy(model_env)
+    cumulative_reward = 0
+    observation, info = env.reset()
+    for _ in range(episode_length):
+        _, actions = program(observation, jnp.zeros(program_state_size))
+        action = jnp.argmax(actions).item()
+        observation, reward, terminated, truncated, info = env.step(action)
+        cumulative_reward += reward
+        if terminated or truncated:
+            break
+
+    env.close()
+    return cumulative_reward
 
 
 def _evaluate_genome_n_times(evaluation_function: Callable, genome: jnp.ndarray, rnd_key: random.PRNGKey,
