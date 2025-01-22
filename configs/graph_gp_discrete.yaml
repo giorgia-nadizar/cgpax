@@ -1,6 +1,6 @@
 constrain_outputs: true
 mutation: standard
-n_evals_per_individual: 1
+n_evals_per_individual: 5
 n_individuals: 100
 n_parallel_runs: 1
 nan_replacement: -100000.0
@@ -40,13 +40,13 @@ nested1:
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 1000
+    n_generations: 50
   - problem:
       environment: Acrobot-v1
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 1000
+    n_generations: 50
   - problem:
       environment: LunarLander-v2
       episode_length: 1000
