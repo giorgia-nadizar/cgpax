@@ -3,6 +3,7 @@ import copy
 import functools
 from datetime import datetime
 from functools import partial, reduce
+from multiprocessing import Pool
 from typing import List, Callable, Tuple, Dict, Union, Set
 
 import telegram
@@ -18,7 +19,7 @@ from jax import vmap, jit, random
 import jax.numpy as jnp
 
 from cgpax.control_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
-    evaluate_lgp_genome_n_times
+    evaluate_lgp_genome_n_times, evaluate_program_discrete_gymnasium
 from cgpax.functions import function_set_control, constants
 from cgpax.selection import truncation_selection, tournament_selection, fp_selection, composed_selection
 from cgpax.tracker import Tracker
@@ -43,7 +44,8 @@ def init_environment(env_name: str, episode_length: int, terminate_when_unhealth
     return env
 
 
-def init_environment_from_config(config: Dict) -> EpisodeWrapper:
+def init_environment_from_config(config: Dict) -> Union[
+    EpisodeWrapper, Env]:
     return init_environment(config["problem"]["environment"], config["problem"]["episode_length"],
                             config.get("unhealthy_termination", True))
 
@@ -112,13 +114,21 @@ def compute_parallel_runs_indexes(n_individuals: int, n_parallel_runs: int, n_el
     return indexes.astype(int)
 
 
-def compile_genome_evaluation(config: Dict, env: EpisodeWrapper, episode_length: int) -> Callable:
+def compile_genome_evaluation(config: Dict, env: Union[EpisodeWrapper, Env], episode_length: int) -> Callable:
+    gpu = not "-v" in config["problem"]["environment"]
+    if config["n_evals_per_individual"] > 1 and not gpu:
+        raise NotImplementedError
+
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
         w_encoding_func = encoding_weighted.genome_to_cgp_program
     else:
         eval_func, eval_n_times_func = evaluate_lgp_genome, evaluate_lgp_genome_n_times
         w_encoding_func = encoding_weighted.genome_to_lgp_program
+
+    if not gpu:
+        eval_func = partial(eval_func, inner_evaluator=evaluate_program_discrete_gymnasium, rnd_key=None)
+
     if config["n_evals_per_individual"] == 1:
         partial_eval_genome = partial(eval_func, config=config, env=env, episode_length=episode_length)
     else:
@@ -128,8 +138,18 @@ def compile_genome_evaluation(config: Dict, env: EpisodeWrapper, episode_length:
     if config.get("weighted_connections", False):
         partial_eval_genome = partial(partial_eval_genome, genome_encoder=w_encoding_func)
 
-    vmap_evaluate_genome = vmap(partial_eval_genome, in_axes=(0, 0))
-    return jit(vmap_evaluate_genome)
+    if gpu:
+        vmap_evaluate_genome = vmap(partial_eval_genome, in_axes=(0, 0))
+        return jit(vmap_evaluate_genome)
+    else:
+
+        def _parallel_eval_genomes(genomes: jnp.ndarray, rnd_keys) -> jnp.ndarray:
+            with Pool(len(genomes)) as p:
+                fitnesses = p.map(partial_eval_genome, genomes)
+            print(fitnesses)
+            return jnp.asarray(fitnesses)
+
+        return _parallel_eval_genomes
 
 
 def compile_crossover(config: Dict) -> Union[Callable, None]:
