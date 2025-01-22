@@ -1,5 +1,6 @@
 absl-py==1.0.0
 brax==0.0.15
+box2d-py==2.3.5
 chex==0.1.5
 dm-haiku==0.0.5
 flax==0.6.0
@@ -27,6 +28,7 @@ protobuf==3.19.4
 scikit-learn==1.0.2
 scipy==1.8.0
 seaborn==0.11.2
+swig==4.3.0
 torch==1.10.2
 tensorflow-probability==0.15.0
 ttkbootstrap==1.5.1
