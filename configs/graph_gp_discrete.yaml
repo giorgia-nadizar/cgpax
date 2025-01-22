@@ -34,7 +34,7 @@ nested1:
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 1000
+    n_generations: 50
   - problem:
       environment: MountainCar-v0
       episode_length: 1000
