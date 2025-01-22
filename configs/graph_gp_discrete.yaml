@@ -52,4 +52,4 @@ nested1:
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 2000
+    n_generations: 5000
