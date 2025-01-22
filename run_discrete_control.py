@@ -82,14 +82,6 @@ def run(config: Dict, wandb_run: Run) -> None:
         with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
             csv_file.write(f"{_generation},{jnp.max(reward_values)},{times['evaluation_time']:.2f}\n")
 
-        # if multiple evals, need median
-        if config["n_evals_per_individual"] > 1:
-            fitness_values = jnp.median(fitness_values, axis=1)
-            # TODO should extract the id of the median
-            reward_values = jnp.mean(reward_values, axis=1)
-            # for rew in detailed_rewards:
-            #     detailed_rewards[rew] = jnp.mean(detailed_rewards[rew], axis=1)
-
         # select parents
         rnd_key, select_key = random.split(rnd_key, 2)
         start_selection = time.process_time()

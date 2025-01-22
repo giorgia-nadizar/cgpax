@@ -116,8 +116,6 @@ def compute_parallel_runs_indexes(n_individuals: int, n_parallel_runs: int, n_el
 
 def compile_genome_evaluation(config: Dict, env: Union[EpisodeWrapper, Env], episode_length: int) -> Callable:
     gpu = not "-v" in config["problem"]["environment"]
-    if config["n_evals_per_individual"] > 1 and not gpu:
-        raise NotImplementedError
 
     if config["solver"] == "cgp":
         eval_func, eval_n_times_func = evaluate_cgp_genome, evaluate_cgp_genome_n_times
@@ -129,7 +127,7 @@ def compile_genome_evaluation(config: Dict, env: Union[EpisodeWrapper, Env], epi
     if not gpu:
         eval_func = partial(eval_func, inner_evaluator=evaluate_program_discrete_gymnasium, rnd_key=None)
 
-    if config["n_evals_per_individual"] == 1:
+    if config["n_evals_per_individual"] == 1 or not gpu:
         partial_eval_genome = partial(eval_func, config=config, env=env, episode_length=episode_length)
     else:
         partial_eval_genome = partial(eval_n_times_func, config=config, env=env,
@@ -144,9 +142,14 @@ def compile_genome_evaluation(config: Dict, env: Union[EpisodeWrapper, Env], epi
     else:
 
         def _parallel_eval_genomes(genomes: jnp.ndarray, rnd_keys) -> jnp.ndarray:
+            fitnesses_list = []
             with Pool(len(genomes)) as p:
-                fitnesses = p.map(partial_eval_genome, genomes)
-            return jnp.asarray(fitnesses)
+                for _ in range(config["n_evals_per_individual"]):
+                    fitnesses_list.append(jnp.asarray(p.map(partial_eval_genome, genomes)))
+            fitnesses_stack = jnp.vstack(fitnesses_list)
+            fitnesses_mean = jnp.mean(fitnesses_stack, axis=0)
+
+            return fitnesses_mean
 
         return _parallel_eval_genomes
 
