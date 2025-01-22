@@ -146,7 +146,6 @@ def compile_genome_evaluation(config: Dict, env: Union[EpisodeWrapper, Env], epi
         def _parallel_eval_genomes(genomes: jnp.ndarray, rnd_keys) -> jnp.ndarray:
             with Pool(len(genomes)) as p:
                 fitnesses = p.map(partial_eval_genome, genomes)
-            print(fitnesses)
             return jnp.asarray(fitnesses)
 
         return _parallel_eval_genomes
