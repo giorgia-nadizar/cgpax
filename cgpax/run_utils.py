@@ -9,8 +9,9 @@ import telegram
 from brax import envs
 from brax.envs import ant
 from brax.envs.wrappers import EpisodeWrapper
-from scipy.cluster.hierarchy import weighted
+from gymnasium import Env
 from wandb.apis.public import Run
+import gymnasium as gym
 
 from jax import vmap, jit, random
 import jax.numpy as jnp
@@ -26,8 +27,11 @@ from cgpax.utils import identity
 from cgpax.weighted import encoding_weighted, individual_weighted
 
 
-def init_environment(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> EpisodeWrapper:
-    if env_name == "miniant":
+def init_environment(env_name: str, episode_length: int, terminate_when_unhealthy: bool = True) -> Union[
+    EpisodeWrapper, Env]:
+    if "-v" in env_name:  # standard gym env
+        return gym.make(env_name)
+    elif env_name == "miniant":
         env = functools.partial(ant.Ant, use_contact_forces=False)(terminate_when_unhealthy=terminate_when_unhealthy)
     else:
         try:
