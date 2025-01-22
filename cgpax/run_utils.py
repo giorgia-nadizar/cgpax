@@ -10,6 +10,7 @@ from brax import envs
 from brax.envs import ant
 from brax.envs.wrappers import EpisodeWrapper
 from gymnasium import Env
+from gymnasium.spaces import Discrete, Box
 from wandb.apis.public import Run
 import gymnasium as gym
 
@@ -88,7 +89,10 @@ def update_config_with_data(config: Dict, input_space_size: int, output_space_si
 
 
 def update_config_with_env_data(config: Dict, env) -> None:
-    update_config_with_data(config, env.observation_size, env.action_size)
+    action_size = env.action_space.n if isinstance(env.action_space, Discrete) else env.action_size
+    observation_size = env.observation_space.shape[0] if isinstance(env.observation_space,
+                                                                    Box) else env.observation_size
+    update_config_with_data(config, observation_size, action_size)
 
 
 def load_dataset(problem_name: str) -> Tuple[jnp.ndarray, jnp.ndarray]:
