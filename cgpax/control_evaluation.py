@@ -114,8 +114,8 @@ def _evaluate_program_detailed_tracking(program: Callable, program_state_size: i
                              _extract_final_detailed_rewards_carry)
 
 
-def evaluate_program_gymnasium(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
-                               model_env: Env, episode_length: int = 1000) -> Dict:
+def evaluate_program_discrete_gymnasium(program: Callable, program_state_size: int, rnd_key: random.PRNGKey,
+                                        model_env: Env, episode_length: int = 1000) -> Dict:
     env = copy.deepcopy(model_env)
     cumulative_reward = 0
     observation, info = env.reset()
