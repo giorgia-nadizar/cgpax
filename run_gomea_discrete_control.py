@@ -41,7 +41,8 @@ def run(config: Dict, wandb_run: Run) -> None:
     # compose genome eval
     def genomes_to_fitnesses(gs: jnp.ndarray, rnd_keys: jnp.ndarray) -> jnp.ndarray:
         evaluation_outcomes = evaluate_genomes(gs, jnp.array(rnd_keys))
-        return replace_invalid_nan_reward(evaluation_outcomes["cum_reward"])
+        cumulative_rewards = evaluation_outcomes
+        return replace_invalid_nan_reward(cumulative_rewards)
 
     # store_fitness_details = config.get("store_fitness_details", [])
     # store_fitness_details = store_fitness_details if isinstance(store_fitness_details, list) else [
