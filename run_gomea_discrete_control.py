@@ -129,7 +129,7 @@ if __name__ == '__main__':
     entity, project = "giorgianadizar", "cgpax"
     # existing_run_names = [r.name for r in api.runs(entity + "/" + project) if r.state == "finished"]
 
-    config_files = ["configs/graph_gp_gomea.yaml"]
+    config_files = ["configs/graph_gp_gomea_discrete.yaml"]
     unpacked_configs = []
 
     for config_file in config_files:
