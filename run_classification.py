@@ -67,7 +67,7 @@ def run(config: Dict, wandb_run: Run) -> None:
                                              genome_mask=genome_mask, rnd_key=genome_key,
                                              genome_transformation_function=genome_transformation_function)
 
-    with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
+    with open(f"results/{cfg['run_name']}.csv", "w") as csv_file:
         csv_file.write("iteration,fitness,test_accuracy,time\n")
 
     times = {}
@@ -82,7 +82,7 @@ def run(config: Dict, wandb_run: Run) -> None:
         # compute test fitness
         best_individual = genomes[np.argmax(fitnesses)]
         best_test_accuracy = genome_evaluation_function(best_individual, config=config, x_values=x_test,
-                                                        y_values=y_test)
+                                                        y_values=y_test)["accuracy"]
 
         with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
             csv_file.write(f"{_generation},{jnp.max(fitnesses)},{best_test_accuracy},{eval_time:.2f}\n")
