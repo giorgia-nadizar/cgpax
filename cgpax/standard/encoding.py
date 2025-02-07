@@ -8,7 +8,7 @@ from cgpax.functions import numeric_function_switch, constants, boolean_function
 
 
 @jit
-def _update_buffer_control(buffer_idx: int,
+def _update_buffer_numeric(buffer_idx: int,
                            carry: Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]) -> Tuple[
     jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]:
     x_genes, y_genes, f_genes, buffer = carry
@@ -38,7 +38,7 @@ def _update_buffer_boolean(buffer_idx: int,
 
 
 @jit
-def _update_register_control(row_idx: int, carry: Tuple[
+def _update_register_numeric(row_idx: int, carry: Tuple[
     jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int, jnp.ndarray]) -> \
         Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray, int, jnp.ndarray]:
     lhs_genes, x_genes, y_genes, f_genes, n_in, register = carry
@@ -69,7 +69,7 @@ def _update_register_boolean(row_idx: int, carry: Tuple[
 
 def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
                           outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh,
-                          buffer_update_fn: Callable = _update_buffer_control
+                          buffer_update_fn: Callable = _update_buffer_numeric
                           ) -> Callable:
     n_const = config["n_constants"]
     n_in = config["n_in"]
@@ -95,7 +95,7 @@ def genome_to_cgp_program(genome: jnp.ndarray, config: Dict,
 
 def genome_to_lgp_program(genome: jnp.ndarray, config: Dict,
                           outputs_wrapper: Callable[[jnp.ndarray], jnp.ndarray] = jnp.tanh,
-                          register_update_fn: Callable = _update_register_control) -> Callable:
+                          register_update_fn: Callable = _update_register_numeric) -> Callable:
     n_const = config["n_constants"]
     n_in = config["n_in"]
     n_out = config["n_out"]
