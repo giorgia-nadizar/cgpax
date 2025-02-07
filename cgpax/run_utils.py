@@ -12,6 +12,7 @@ from brax.envs import ant
 from brax.envs.wrappers import EpisodeWrapper
 from gymnasium import Env
 from gymnasium.spaces import Discrete, Box
+from sklearn import datasets
 from wandb.apis.public import Run
 import gymnasium as gym
 
@@ -98,8 +99,11 @@ def update_config_with_env_data(config: Dict, env) -> None:
 
 
 def load_dataset(problem_name: str) -> Tuple[jnp.ndarray, jnp.ndarray]:
-    x_values = jnp.load(f"datasets/{problem_name}_x.npy")
-    y_values = jnp.load(f"datasets/{problem_name}_y.npy")
+    if problem_name == "breast_cancer":
+        x_values, y_values = datasets.load_breast_cancer(return_X_y=True)
+    else:
+        x_values = jnp.load(f"datasets/{problem_name}_x.npy")
+        y_values = jnp.load(f"datasets/{problem_name}_y.npy")
     return x_values, y_values
 
 
