@@ -15,8 +15,8 @@ from jax import random
 
 from functools import partial
 
-from cgpax.boolean_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
-from cgpax.functions import function_set_boolean, function_set_numeric
+from cgpax.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
+from cgpax.functions import  function_set_numeric
 from cgpax.gomea.fos import compute_normalized_mutual_information_matrix, compute_fos
 from cgpax.gomea.gom import parallel_gom
 from cgpax.standard import individual
