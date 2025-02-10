@@ -2,6 +2,8 @@ import time
 from os import write
 from typing import Dict
 
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
 from wandb.sdk.wandb_run import Run
 
 import cgpax
@@ -14,7 +16,7 @@ from jax import random
 from functools import partial
 
 from cgpax.boolean_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
-from cgpax.functions import function_set_boolean
+from cgpax.functions import function_set_boolean, function_set_numeric
 from cgpax.gomea.fos import compute_normalized_mutual_information_matrix, compute_fos
 from cgpax.gomea.gom import parallel_gom
 from cgpax.standard import individual
@@ -31,10 +33,19 @@ def run(config: Dict, wandb_run: Run) -> None:
 
     x_values, y_values = load_dataset(config["problem"])
 
-    # assert this
-    config["use_input_constants"] = False
+    x_values, y_values = load_dataset(config["problem"])
+    n_classes = len(set(y_values))
+    train_size = config.get("train_size", 0.8)
 
-    update_config_with_data(config, x_values.shape[1], y_values.shape[1], function_set=function_set_boolean)
+    # split train and test
+    x_train, x_test, y_train, y_test = train_test_split(x_values, y_values, test_size=(1. - train_size))
+
+    # standardize
+    scaler = StandardScaler()
+    x_train = scaler.fit_transform(x_train)
+    x_test = scaler.transform(x_test)
+
+    update_config_with_data(config, x_train.shape[1], n_classes, function_set=function_set_numeric)
     # wandb.config.update(config, allow_val_change=True)
 
     # preliminary evo steps
@@ -45,6 +56,9 @@ def run(config: Dict, wandb_run: Run) -> None:
 
     def genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> float:
         return vmap(genome_to_fitness)(genotypes)["accuracy"]
+
+    def genomes_to_test_accuracy(genotype: jnp.ndarray, fake_rnd_key: random.PRNGKey = None) -> float:
+        return genome_evaluation_function(genotype, config=config, x_values=x_test, y_values=y_test)["accuracy"]
 
     # compilation of functions
     replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
@@ -74,8 +88,8 @@ def run(config: Dict, wandb_run: Run) -> None:
         f"FITNESS: {jnp.max(fitnesses)} \t "
         f"E: {eval_time:.2f} \t"
     )
-    with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
-        csv_file.write("iteration,fitness,time\n")
+    with open(f"results/{cfg['run_name']}.csv", "w") as csv_file:
+        csv_file.write("iteration,fitness,test_accuracy,time\n")
         csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
     times = {}
@@ -93,14 +107,19 @@ def run(config: Dict, wandb_run: Run) -> None:
 
         # each gomea round has this many iterations within it
         gom_start_time = time.process_time()
-        genomes, fitnesses, fitnesses_history = parallel_gom(genomes, fitnesses, fos, genomes_to_fitnesses, rnd_key,
-                                                             track_fitnesses=True, intermediate_prints=True)
+        genomes, fitnesses, fitnesses_history, test_accuracies_history = parallel_gom(genomes, fitnesses, fos,
+                                                                                      genomes_to_fitnesses, rnd_key,
+                                                                                      track_fitnesses=True,
+                                                                                      intermediate_prints=True,
+                                                                                      test_eval_fn=genomes_to_test_accuracy)
         times["gom_time"] = time.process_time() - gom_start_time
         avg_gom_time = times["gom_time"] / n_inner_iterations
 
         with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
             for fit_idx, fit_hist in enumerate(fitnesses_history):
-                csv_file.write(f"{_generation + fit_idx},{fit_hist},{avg_gom_time:.2f}\n")
+                csv_file.write(
+                    f"{_generation + fit_idx},{fit_hist},{test_accuracies_history[fit_idx]},{avg_gom_time:.2f}\n"
+                )
 
         _generation += n_inner_iterations
 
@@ -140,7 +159,7 @@ if __name__ == '__main__':
     entity, project = "giorgianadizar", "cgpax"
     # existing_run_names = [r.name for r in api.runs(entity + "/" + project) if r.state == "finished"]
 
-    config_files = ["configs/graph_gp_gomea_boolean.yaml"]
+    config_files = ["configs/graph_gp_gomea_classification.yaml"]
     unpacked_configs = []
 
     for config_file in config_files:
