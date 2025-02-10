@@ -9,9 +9,10 @@ distance: false
 p_mut_functions: 0.1
 recursive: false
 unhealthy_termination: true
-use_input_constants: false
+use_input_constants: true
 saving_interval: 100
 seed: [ 0,1,2,3,4 ]
+train_size: 0.8
 #store_fitness_details_list: [ healthy, ctrl, forward ]
 
 nested0:
@@ -32,6 +33,6 @@ nested0:
 #  incremental_steps: 1
 #  maximize: true
 n_generations: 5000
-problem: [ two_bit_adder, two_bit_multiplier ]
+problem: breast_cancer
 early_stop: true
 target_fitness: 1
