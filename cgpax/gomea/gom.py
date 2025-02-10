@@ -21,14 +21,17 @@ def parallel_gom(
         eval_fn: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray],
         rnd_key: random.PRNGKey,
         track_fitnesses: bool = False,
-        intermediate_prints: bool = False
-) -> Union[Tuple[jnp.ndarray, jnp.ndarray], Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray]]:
+        intermediate_prints: bool = False,
+        test_eval_fn: Callable[[jnp.ndarray, random.PRNGKey], float] = None,
+) -> Union[Tuple[jnp.ndarray, jnp.ndarray], Tuple[jnp.ndarray, jnp.ndarray, jnp.ndarray], Tuple[
+    jnp.ndarray, jnp.ndarray, jnp.ndarray, jnp.ndarray]]:
     mutation_fn = partial(_gom_mutate, donors=donors)
     array_fos = [jnp.asarray(f) for f in fos]
     shuffled_fos = [rnd.sample(array_fos, len(array_fos)) for _ in donors]
 
     genotypes = deepcopy(donors)
     fitnesses_history = []
+    test_accuracies_history = []
 
     for f_idx in range(len(array_fos)):
         rnd_key, *mutate_keys = random.split(rnd_key, len(donors) + 1)
@@ -40,12 +43,21 @@ def parallel_gom(
 
         genotypes = jnp.where((offspring_fitnesses > fitnesses)[:, None], offspring_genotypes, genotypes)
         fitnesses = jnp.where(offspring_fitnesses > fitnesses, offspring_fitnesses, fitnesses)
+        fitnesses_history.append(jnp.max(fitnesses))
 
         if intermediate_prints:
             print(f"\t {f_idx} \t FITNESS: {jnp.max(fitnesses)}")
-        fitnesses_history.append(jnp.max(fitnesses))
+
+        if test_eval_fn is not None:
+            best_individual = genotypes[jnp.argmax(fitnesses)]
+            rnd_key, test_key = random.split(rnd_key, 2)
+            best_test_accuracy = test_eval_fn(best_individual, test_key)["accuracy"]
+            test_accuracies_history.append(best_test_accuracy)
 
     if track_fitnesses:
-        return genotypes, fitnesses, jnp.asarray(fitnesses_history)
+        if test_eval_fn is None:
+            return genotypes, fitnesses, jnp.asarray(fitnesses_history)
+        else:
+            return genotypes, fitnesses, jnp.asarray(fitnesses_history), jnp.asarray(test_accuracies_history)
     else:
         return genotypes, fitnesses
