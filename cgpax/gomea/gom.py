@@ -51,7 +51,7 @@ def parallel_gom(
         if test_eval_fn is not None:
             best_individual = genotypes[jnp.argmax(fitnesses)]
             rnd_key, test_key = random.split(rnd_key, 2)
-            best_test_accuracy = test_eval_fn(best_individual, test_key)["accuracy"]
+            best_test_accuracy = test_eval_fn(best_individual, test_key)
             test_accuracies_history.append(best_test_accuracy)
 
     if track_fitnesses:
