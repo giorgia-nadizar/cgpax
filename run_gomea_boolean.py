@@ -18,7 +18,7 @@ from cgpax.run_utils import compute_masks, compute_genome_transformation_functio
 from cgpax.standard import individual
 
 
-def run(config: Dict, wandb_run: Run) -> None:
+def run_gomea_boolean(config: Dict) -> None:
     rnd_key = random.PRNGKey(config["seed"])
 
     x_values, y_values = load_dataset(config["problem"])
@@ -114,5 +114,5 @@ if __name__ == '__main__':
     for count, cfg in enumerate(unpacked_configs):
         cfg["run_name"] = f"gomea_{cfg['solver']}_{cfg['problem']}_{cfg['seed']}"
         print(cfg["run_name"])
-        run(cfg, None)
+        run_gomea_boolean(cfg, None)
         print()

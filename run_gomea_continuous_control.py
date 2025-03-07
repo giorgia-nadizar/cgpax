@@ -5,7 +5,6 @@ from typing import Dict
 import jax.numpy as jnp
 from jax import jit, default_backend
 from jax import random
-from wandb.sdk.wandb_run import Run
 
 import cgpax
 from cgpax.gomea.fos import compute_fos
@@ -15,7 +14,7 @@ from cgpax.run_utils import update_config_with_env_data, init_environment_from_c
 from cgpax.standard import individual
 
 
-def run(config: Dict, wandb_run: Run) -> None:
+def run_gomea_continuous_control(config: Dict) -> None:
     rnd_key = random.PRNGKey(config["seed"])
 
     environment = init_environment_from_config(config)
@@ -93,7 +92,7 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    config_files = ["configs/graph_gp_gomea.yaml"]
+    config_files = ["configs/graph_gp_gomea_continuous_control.yaml"]
     unpacked_configs = []
 
     for config_file in config_files:
@@ -103,5 +102,5 @@ if __name__ == '__main__':
     for count, cfg in enumerate(unpacked_configs):
         cfg["run_name"] = f"gomea_{cfg['solver']}_{cfg['problem']['environment']}_{cfg['seed']}"
         print(cfg["run_name"])
-        run(cfg, None)
+        run_gomea_continuous_control(cfg)
         print()

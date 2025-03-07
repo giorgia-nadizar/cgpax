@@ -7,7 +7,6 @@ from jax import default_backend, vmap
 from jax import random
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from wandb.sdk.wandb_run import Run
 
 import cgpax
 from cgpax.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
@@ -20,7 +19,7 @@ from cgpax.run_utils import compute_masks, compute_genome_transformation_functio
 from cgpax.standard import individual
 
 
-def run(config: Dict, wandb_run: Run) -> None:
+def run_gomea_classification(config: Dict) -> None:
     rnd_key = random.PRNGKey(config["seed"])
 
     x_values, y_values = load_dataset(config["problem"])
@@ -131,5 +130,5 @@ if __name__ == '__main__':
     for count, cfg in enumerate(unpacked_configs):
         cfg["run_name"] = f"gomea_{cfg['solver']}_{cfg['problem']}_{cfg['seed']}"
         print(cfg["run_name"])
-        run(cfg, None)
+        run_gomea_classification(cfg)
         print()
