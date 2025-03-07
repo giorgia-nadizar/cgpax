@@ -11,8 +11,8 @@ def compute_fos(genomes: jnp.ndarray,
                 rnd_key: random.PRNGKey,
                 config: Dict,
                 bias_matrix: jnp.ndarray = None,
-                ignore_full_list: bool = True,
-                mode: str = "LT") -> Tuple[List, Union[jnp.ndarray, None]]:
+                ignore_full_list: bool = True) -> Tuple[List, Union[jnp.ndarray, None]]:
+    fos_mode = config.get("fos_mode", "LT")
     nmi_matrix, bias_matrix = compute_normalized_mutual_information_matrix(genomes, config,
                                                                            bias_matrix)  # (genotype size, genotype size)
     fos = compute_lt_fos(nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
