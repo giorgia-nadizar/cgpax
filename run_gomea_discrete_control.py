@@ -1,26 +1,18 @@
 import time
-from os import write
+from functools import partial
 from typing import Dict
 
+import jax.numpy as jnp
+from jax import jit, default_backend
+from jax import random
 from wandb.sdk.wandb_run import Run
 
 import cgpax
-import wandb
-import telegram
-from jax import jit, default_backend
-import jax.numpy as jnp
-from jax import random
-
-from functools import partial
-
-from cgpax.gomea.fos import compute_normalized_mutual_information_matrix, compute_lt_fos, compute_fos
+from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom
+from cgpax.run_utils import update_config_with_env_data, init_environment_from_config, compute_masks, \
+    compile_genome_evaluation, compute_genome_transformation_function, process_dictionary
 from cgpax.standard import individual
-
-from cgpax.run_utils import update_config_with_env_data, compile_parents_selection, compile_mutation, \
-    init_environment_from_config, compute_masks, compile_genome_evaluation, init_tracking, update_tracking, \
-    compute_genome_transformation_function, compile_survival_selection, compile_crossover, \
-    config_to_run_name, compute_weights_mutation_function, notify_update, process_dictionary
 
 
 def run(config: Dict, wandb_run: Run) -> None:
