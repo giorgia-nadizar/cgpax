@@ -13,9 +13,12 @@ def compute_fos(genomes: jnp.ndarray,
                 bias_matrix: jnp.ndarray = None,
                 ignore_full_list: bool = True) -> Tuple[List, Union[jnp.ndarray, None]]:
     fos_mode = config.get("fos_mode", "LT")
-    nmi_matrix, bias_matrix = compute_normalized_mutual_information_matrix(genomes, config,
+    if fos_mode == "LT":
+        nmi_matrix, bias_matrix = _compute_normalized_mutual_information_matrix(genomes, config,
                                                                            bias_matrix)  # (genotype size, genotype size)
-    fos = compute_lt_fos(nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
+        fos = _compute_lt_fos(nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
+    else:
+        raise NotImplementedError
     return fos, bias_matrix
 
 
@@ -37,7 +40,7 @@ def _nearest_neighbor(idx: int, s_matrix: jnp.ndarray, n_indices: jnp.ndarray, m
 
 
 # https://github.com/marcovirgolin/gpg/blob/pybind/src/fos.hpp#L284
-def compute_lt_fos(normalized_information_matrix: jnp.ndarray, rnd_key: random.PRNGKey,
+def _compute_lt_fos(normalized_information_matrix: jnp.ndarray, rnd_key: random.PRNGKey,
                    ignore_full_list: bool = True) -> List:
     n_entries = normalized_information_matrix.shape[0]
     rnd_key, permutation_key = random.split(rnd_key)
@@ -143,7 +146,7 @@ def compute_lt_fos(normalized_information_matrix: jnp.ndarray, rnd_key: random.P
     return [c for c in h_cluster if len(c) < n_entries] if ignore_full_list else h_cluster
 
 
-def compute_normalized_mutual_information_matrix(
+def _compute_normalized_mutual_information_matrix(
         genomes: jnp.ndarray,
         config: Dict,
         bias_matrix: jnp.ndarray = None,
@@ -170,10 +173,10 @@ def compute_normalized_mutual_information_matrix(
     else:
         raise NotImplementedError
 
-    return _compute_normalized_mutual_information_matrix(shifted_genomes, n_symbols, bias_matrix)
+    return _compute_nmi_matrix(shifted_genomes, n_symbols, bias_matrix)
 
 
-def _compute_normalized_mutual_information_matrix(
+def _compute_nmi_matrix(
         genomes: jnp.ndarray,
         n_symbols: int,
         bias_matrix: jnp.ndarray = None,
