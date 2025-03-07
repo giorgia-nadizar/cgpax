@@ -15,11 +15,18 @@ def compute_fos(genomes: jnp.ndarray,
     fos_mode = config.get("fos_mode", "LT")
     if fos_mode == "LT":
         nmi_matrix, bias_matrix = _compute_normalized_mutual_information_matrix(genomes, config,
-                                                                           bias_matrix)  # (genotype size, genotype size)
+                                                                                bias_matrix)  # (genotype size, genotype size)
         fos = _compute_lt_fos(nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
+    elif fos_mode == "U":
+        fos = _compute_u_fos(genomes)
     else:
         raise NotImplementedError
     return fos, bias_matrix
+
+
+def _compute_u_fos(genomes: jnp.ndarray, ) -> List:
+    _, genotype_size = genomes.shape
+    return [[i] for i in range(genotype_size)]
 
 
 @partial(jit, static_argnames=("mpm_length",))
@@ -41,7 +48,7 @@ def _nearest_neighbor(idx: int, s_matrix: jnp.ndarray, n_indices: jnp.ndarray, m
 
 # https://github.com/marcovirgolin/gpg/blob/pybind/src/fos.hpp#L284
 def _compute_lt_fos(normalized_information_matrix: jnp.ndarray, rnd_key: random.PRNGKey,
-                   ignore_full_list: bool = True) -> List:
+                    ignore_full_list: bool = True) -> List:
     n_entries = normalized_information_matrix.shape[0]
     rnd_key, permutation_key = random.split(rnd_key)
     random_order = random.permutation(permutation_key, n_entries)
