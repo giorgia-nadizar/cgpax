@@ -20,7 +20,6 @@ def run(config: Dict, wandb_run: Run) -> None:
 
     environment = init_environment_from_config(config)
     update_config_with_env_data(config, environment)
-    # wandb.config.update(config, allow_val_change=True)
 
     # preliminary evo steps
     genome_mask, mutation_mask = compute_masks(config)
@@ -34,12 +33,6 @@ def run(config: Dict, wandb_run: Run) -> None:
     def genomes_to_fitnesses(gs: jnp.ndarray, rnd_keys: jnp.ndarray) -> jnp.ndarray:
         evaluation_outcomes = evaluate_genomes(gs, jnp.array(rnd_keys))
         return replace_invalid_nan_reward(evaluation_outcomes["cum_reward"])
-
-    # store_fitness_details = config.get("store_fitness_details", [])
-    # store_fitness_details = store_fitness_details if isinstance(store_fitness_details, list) else [
-    #     store_fitness_details]
-    # tracking_objects = init_tracking(config, store_fitness_details=store_fitness_details,
-    #                                  saving_interval=config["saving_interval"])
 
     rnd_key, genome_key = random.split(rnd_key, 2)
     genomes = individual.generate_population(pop_size=config["n_individuals"],
@@ -95,28 +88,10 @@ def run(config: Dict, wandb_run: Run) -> None:
             f"FITNESS: {jnp.max(fitnesses)}"
         )
 
-        # tracking_objects = update_tracking(
-        #     config=config,
-        #     tracking_objects=tracking_objects,
-        #     genomes=genomes,
-        #     fitness_values=fitnesses,
-        #     rewards=fitnesses,
-        #     detailed_rewards=None,
-        #     times=times,
-        #     wdb_run=wandb_run
-        # )
-
 
 if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
-
-    # telegram_config = cgpax.get_config("telegram/token.yaml")
-    # telegram_bot = telegram.Bot(telegram_config["token"])
-
-    # api = wandb.Api(timeout=40)
-    entity, project = "giorgianadizar", "cgpax"
-    # existing_run_names = [r.name for r in api.runs(entity + "/" + project) if r.state == "finished"]
 
     config_files = ["configs/graph_gp_gomea.yaml"]
     unpacked_configs = []
@@ -124,18 +99,9 @@ if __name__ == '__main__':
     for config_file in config_files:
         unpacked_configs += process_dictionary(cgpax.get_config(config_file))
 
-    # notify_update(f"Total configs found: {len(unpacked_configs)}", telegram_bot, telegram_config["chat_id"])
     print(f"Total configs found: {len(unpacked_configs)}")
     for count, cfg in enumerate(unpacked_configs):
-        # run_name, _, _, _, _, _ = config_to_run_name(cfg)
         cfg["run_name"] = f"gomea_{cfg['solver']}_{cfg['problem']['environment']}_{cfg['seed']}"
         print(cfg["run_name"])
-        # if run_name in existing_run_names:
-        #     notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} already exists")
-        # continue
-        # notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
-        # telegram_config["chat_id"])
-        # wb_run = wandb.init(config=cfg, project=project, name=run_name)
         run(cfg, None)
-        # wb_run.finish()
         print()
