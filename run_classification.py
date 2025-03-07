@@ -1,32 +1,23 @@
 import time
-from os import write
+from functools import partial
 from typing import Dict
 
+import jax.numpy as jnp
 import numpy as np
+from jax import default_backend, vmap
+from jax import random
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 from wandb.sdk.wandb_run import Run
 
 import cgpax
-import wandb
-import telegram
-from jax import jit, default_backend, vmap
-import jax.numpy as jnp
-from jax import random
-
-from functools import partial
-
 from cgpax.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
-from cgpax.functions import function_set_numeric, function_set_boolean
-from cgpax.gomea.fos import compute_normalized_mutual_information_matrix, compute_fos
-from cgpax.gomea.gom import parallel_gom
-from cgpax.standard import individual
-
-from cgpax.run_utils import update_config_with_env_data, compile_parents_selection, compile_mutation, \
-    init_environment_from_config, compute_masks, compile_genome_evaluation, init_tracking, update_tracking, \
-    compute_genome_transformation_function, compile_survival_selection, compile_crossover, \
-    config_to_run_name, compute_weights_mutation_function, notify_update, process_dictionary, update_config_with_data, \
+from cgpax.functions import function_set_numeric
+from cgpax.run_utils import compile_parents_selection, compile_mutation, \
+    compute_masks, compute_genome_transformation_function, compile_survival_selection, compile_crossover, \
+    process_dictionary, update_config_with_data, \
     load_dataset
+from cgpax.standard import individual
 
 
 def run(config: Dict, wandb_run: Run) -> None:
