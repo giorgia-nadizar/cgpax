@@ -16,8 +16,8 @@ from jax import random
 from functools import partial
 
 from cgpax.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
-from cgpax.functions import  function_set_numeric
-from cgpax.gomea.fos import compute_normalized_mutual_information_matrix, compute_fos
+from cgpax.functions import function_set_numeric
+from cgpax.gomea.fos import compute_normalized_mutual_information_matrix, compute_lt_fos, compute_fos
 from cgpax.gomea.gom import parallel_gom
 from cgpax.standard import individual
 
@@ -97,11 +97,8 @@ def run(config: Dict, wandb_run: Run) -> None:
     while _generation < config["n_generations"]:
         # fos computation
         fos_start_time = time.process_time()
-        nmi_matrix, bias_matrix = compute_normalized_mutual_information_matrix(genomes, config,
-                                                                               bias_matrix)  # (genotype size, genotype size)
-        print("NMI DONE")
         rnd_key, fos_key = random.split(rnd_key, 2)
-        fos = compute_fos(nmi_matrix, fos_key, ignore_full_list=True)  # 2 * genotype size - 2
+        fos, bias_matrix = compute_fos(genomes, rnd_key, config, bias_matrix, ignore_full_list=True)
         times["fos_time"] = time.process_time() - fos_start_time
         print("FOS DONE")
 
