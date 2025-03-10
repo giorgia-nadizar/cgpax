@@ -70,7 +70,7 @@ def run_gomea_classification(config: Dict) -> None:
         f"FITNESS: {jnp.max(fitnesses)} \t "
         f"E: {eval_time:.2f} \t"
     )
-    with open(f"results/{cfg['run_name']}.csv", "w") as csv_file:
+    with open(f"results/{config['run_name']}.csv", "w") as csv_file:
         csv_file.write("iteration,fitness,test_accuracy,time\n")
         csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
@@ -94,7 +94,7 @@ def run_gomea_classification(config: Dict) -> None:
         times["gom_time"] = time.process_time() - gom_start_time
         avg_gom_time = times["gom_time"] / n_inner_iterations
 
-        with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
+        with open(f"results/{config['run_name']}.csv", "a") as csv_file:
             for fit_idx, fit_hist in enumerate(fitnesses_history):
                 csv_file.write(
                     f"{_generation + fit_idx},{fit_hist},{test_accuracies_history[fit_idx]},{avg_gom_time:.2f}\n"
