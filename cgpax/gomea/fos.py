@@ -21,7 +21,7 @@ def compute_fos(genomes: jnp.ndarray,
         fos = _compute_u_fos(genomes)
     elif fos_mode == "RT":
         rnd_key, rnd_matrix_key = random.split(rnd_key, 2)
-        random_nmi_matrix = random.uniform(rnd_matrix_key, shape=(genomes.shape[2], genomes.shape[2]))
+        random_nmi_matrix = random.uniform(rnd_matrix_key, shape=(genomes.shape[1], genomes.shape[1]))
         fos = _compute_lt_fos(random_nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
     else:
         raise NotImplementedError
@@ -29,7 +29,7 @@ def compute_fos(genomes: jnp.ndarray,
 
 
 def _compute_u_fos(genomes: jnp.ndarray, ) -> List:
-    return [[i] for i in range(genomes.shape[2])]
+    return [[i] for i in range(genomes.shape[1])]
 
 
 @partial(jit, static_argnames=("mpm_length",))
