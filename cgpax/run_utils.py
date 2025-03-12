@@ -92,7 +92,8 @@ def update_config_with_data(config: Dict, input_space_size: int, output_space_si
 
 
 def update_config_with_env_data(config: Dict, env) -> None:
-    action_size = env.action_space.n if isinstance(env.action_space, Discrete) else env.action_size
+    action_size = env.action_space.n if hasattr(env, "action_space") else env.action_size
+    exit(5)
     observation_size = env.observation_space.shape[0] if isinstance(env.observation_space,
                                                                     Box) else env.observation_size
     update_config_with_data(config, observation_size, action_size)
