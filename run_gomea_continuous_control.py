@@ -100,7 +100,8 @@ if __name__ == '__main__':
 
     print(f"Total configs found: {len(unpacked_configs)}")
     for count, cfg in enumerate(unpacked_configs):
-        cfg["run_name"] = f"gomea_{cfg['solver']}_{cfg['problem']['environment']}_{cfg['seed']}"
+        env_name = cfg['problem']['environment'].lower().split("-")[0]
+        cfg["run_name"] = f"gomea_{cfg['solver']}_{env_name}_{cfg['seed']}"
         print(cfg["run_name"])
         run_gomea_continuous_control(cfg)
         print()
