@@ -1,27 +1,20 @@
 import time
+from functools import partial
 from typing import Dict
 
-import gymnasium as gym
-from gymnasium.spaces import Discrete
+import jax.numpy as jnp
+from jax import jit, default_backend
+from jax import random
 from wandb.sdk.wandb_run import Run
 
 import cgpax
-import wandb
 import telegram
-from jax import jit, default_backend
-import jax.numpy as jnp
-from jax import random
-
-from functools import partial
-
-from cgpax.standard import individual
-from cgpax.weighted import individual_weighted
-
 from cgpax.run_utils import update_config_with_env_data, compile_parents_selection, compile_mutation, \
-    init_environment_from_config, compute_parallel_runs_indexes, init_environments, compute_masks, \
-    compile_genome_evaluation, init_tracking, update_tracking, compute_genome_transformation_function, \
-    compile_survival_selection, compute_novelty_scores, normalize_array, compile_crossover, \
-    config_to_run_name, compute_weights_mutation_function, notify_update, process_dictionary
+    init_environment_from_config, compute_masks, \
+    compile_genome_evaluation, compute_genome_transformation_function, \
+    compile_survival_selection, compile_crossover, \
+    config_to_run_name, notify_update, process_dictionary
+from cgpax.standard import individual
 
 
 def run(config: Dict, wandb_run: Run) -> None:
