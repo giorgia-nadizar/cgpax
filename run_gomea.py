@@ -30,7 +30,8 @@ if __name__ == '__main__':
         print(f"Total configs found: {2 * len(unpacked_configs)}")
         for fos_mode in ["U", "RT"]:
             for cfg in unpacked_configs:
-                problem_name = cfg['problem']['environment'] if "control" in problem else cfg['problem']
+                problem_name = cfg['problem']['environment'].lower().split("-")[0] if "control" in problem \
+                    else cfg['problem']
                 cfg["fos_mode"] = fos_mode
                 cfg[
                     "run_name"] = f"gomea_{cfg['solver']}_{problem_name}_{cfg['fos_mode']}_{cfg['seed']}"
