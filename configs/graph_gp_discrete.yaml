@@ -16,7 +16,7 @@ unhealthy_termination: true
 use_input_constants: true
 saving_interval: 100
 #seed: [ 100,101,102,103,104,105,106,107,108,109 ]
-seed: [ 100,101,102,103,104 ]
+seed: [ 105,106,107,108,109 ]
 nested0:
   - crossover: true
     n_extra_registers: 5

@@ -1,3 +1,4 @@
+import os
 import time
 from functools import partial
 from typing import Dict
@@ -124,6 +125,10 @@ def run(config: Dict, wandb_run: Run) -> None:
         assert len(genomes) == len(survivals) + len(offspring)
         genomes = jnp.concatenate((survivals, offspring))
 
+    os.makedirs(f"results/{cfg['run_name']}")
+    jnp.save(f"results/{cfg['run_name']}/genomes.npy", genomes)
+    jnp.save(f"results/{cfg['run_name']}/fitnesses.npy", fitness_values)
+
 
 if __name__ == '__main__':
 
@@ -151,6 +156,7 @@ if __name__ == '__main__':
         notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
                       telegram_config["chat_id"])
         cfg["run_name"] = run_name
+        print(run_name)
         # wb_run = wandb.init(config=cfg, project=project, name=run_name)
         # run(cfg, wb_run)
         run(cfg, None)
