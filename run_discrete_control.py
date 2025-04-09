@@ -134,8 +134,8 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    telegram_config = cgpax.get_config("telegram/token.yaml")
-    telegram_bot = telegram.Bot(telegram_config["token"])
+    # telegram_config = cgpax.get_config("telegram/token.yaml")
+    # telegram_bot = telegram.Bot(telegram_config["token"])
 
     # api = wandb.Api(timeout=40)
     # entity, project = "giorgianadizar", "cgpax"
@@ -147,14 +147,16 @@ if __name__ == '__main__':
     for config_file in config_files:
         unpacked_configs += process_dictionary(cgpax.get_config(config_file))
 
-    notify_update(f"Total configs found: {len(unpacked_configs)}", telegram_bot, telegram_config["chat_id"])
+    # notify_update(f"Total configs found: {len(unpacked_configs)}", telegram_bot, telegram_config["chat_id"])
     for count, cfg in enumerate(unpacked_configs):
-        run_name, _, _, _, _, _ = config_to_run_name(cfg)
+        # run_name, _, _, _, _, _ = config_to_run_name(cfg)
         # if run_name in existing_run_names:
         #     notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} already exists")
         #     continue
-        notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
-                      telegram_config["chat_id"])
+        # notify_update(f"{count + 1}/{len(unpacked_configs)} - {run_name} starting\n{cfg}", telegram_bot,
+        #               telegram_config["chat_id"])
+        processed_env = cfg["problem"]["environment"].lower().split("-")[0]
+        run_name = f"ga_{cfg['solver']}_{processed_env}_{cfg['seed']}"
         cfg["run_name"] = run_name
         print(run_name)
         # wb_run = wandb.init(config=cfg, project=project, name=run_name)
