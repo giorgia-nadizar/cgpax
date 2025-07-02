@@ -192,7 +192,7 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    telegram_config = cgpax.get_config("telegram/token.yaml")
+    telegram_config = cgpax.get_config("../telegram/token.yaml")
     telegram_bot = telegram.Bot(telegram_config["token"])
 
     api = wandb.Api(timeout=40)

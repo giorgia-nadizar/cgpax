@@ -100,10 +100,10 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    telegram_config = cgpax.get_config("telegram/token.yaml")
+    telegram_config = cgpax.get_config("../telegram/token.yaml")
     telegram_bot = telegram.Bot(telegram_config["token"])
 
-    config_file = "configs/rl.yaml"
+    config_file = "../configs/rl.yaml"
     configs = process_dictionary(cgpax.get_config(config_file))
     for count, cfg in enumerate(configs):
         run_name = f'RL_{cfg["environment"]}_{cfg["rl"]["trainer"]}_{cfg["seed"]}'
