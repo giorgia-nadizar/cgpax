@@ -23,6 +23,10 @@ def compute_fos(genomes: jnp.ndarray,
         rnd_key, rnd_matrix_key = random.split(rnd_key, 2)
         random_nmi_matrix = random.uniform(rnd_matrix_key, shape=(genomes.shape[1], genomes.shape[1]))
         fos = _compute_lt_fos(random_nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
+    elif fos_mode == "N1" and config["solver"] == "cgp":
+        fos = _compute_cgp_n1_fos(config)
+    elif fos_mode == "N2" and config["solver"] == "cgp":
+        fos = _compute_cgp_n2_fos(config)
     else:
         raise NotImplementedError
     return fos, bias_matrix
@@ -30,6 +34,37 @@ def compute_fos(genomes: jnp.ndarray,
 
 def _compute_u_fos(genomes: jnp.ndarray, ) -> List:
     return [[i] for i in range(genomes.shape[1])]
+
+
+def _compute_cgp_n1_fos(config: Dict) -> List:
+    assert config["solver"] == "cgp"
+    n_nodes = config["n_nodes"]
+    n_out = config["n_out"]
+    fos = []
+    # each node has its own triplet
+    for node in range(n_nodes):
+        fos.append([node, node + n_nodes, node + 2 * n_nodes])
+    # each output node is independent
+    for output in range(n_out):
+        fos.append([output + 3 * n_nodes])
+    return fos
+
+
+def _compute_cgp_n2_fos(config: Dict) -> List:
+    assert config["solver"] == "cgp"
+    n_nodes = config["n_nodes"]
+    n_out = config["n_out"]
+    fos = []
+    last_group = []
+    # each node has its own triplet
+    for node in range(n_nodes):
+        current_group = last_group + [node, node + n_nodes, node + 2 * n_nodes]
+        fos.append(current_group)
+        last_group = current_group
+    # each output node is independent
+    for output in range(n_out):
+        fos.append(last_group + [output + 3 * n_nodes])
+    return fos
 
 
 @partial(jit, static_argnames=("mpm_length",))
