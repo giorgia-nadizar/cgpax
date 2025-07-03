@@ -39,8 +39,6 @@ def run_gomea_discrete_control(config: Dict) -> None:
     genomes = individual.generate_population(pop_size=config["n_individuals"],
                                              genome_mask=genome_mask, rnd_key=genome_key,
                                              genome_transformation_function=genome_transformation_function)
-    n_inner_iterations = 2 * len(genomes[0]) - 2
-    print(f"N GOMEA ITERATIONS: {n_inner_iterations}")
     bias_matrix = None  # init needed for gom
 
     # evaluate population
@@ -73,13 +71,13 @@ def run_gomea_discrete_control(config: Dict) -> None:
         genomes, fitnesses, fitnesses_history = parallel_gom(genomes, fitnesses, fos, genomes_to_fitnesses, rnd_key,
                                                              track_fitnesses=True, intermediate_prints=True)
         times["gom_time"] = time.process_time() - gom_start_time
-        avg_gom_time = times["gom_time"] / n_inner_iterations
+        avg_gom_time = times["gom_time"] / len(fos)
 
         with open(f"results/{config['run_name']}.csv", "a") as csv_file:
             for fit_idx, fit_hist in enumerate(fitnesses_history):
                 csv_file.write(f"{_generation + fit_idx},{fit_hist},{avg_gom_time:.2f}\n")
 
-        _generation += n_inner_iterations
+        _generation += len(fos)
 
         # print progress
         print(
