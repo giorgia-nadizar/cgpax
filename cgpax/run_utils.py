@@ -100,8 +100,8 @@ def load_dataset(problem_name: str) -> Tuple[jnp.ndarray, jnp.ndarray]:
     if problem_name == "breast_cancer":
         x_values, y_values = datasets.load_breast_cancer(return_X_y=True)
     else:
-        x_values = jnp.load(f"datasets/{problem_name}_x.npy")
-        y_values = jnp.load(f"datasets/{problem_name}_y.npy")
+        x_values = jnp.load(f"../datasets/{problem_name}_x.npy")
+        y_values = jnp.load(f"../datasets/{problem_name}_y.npy")
     return x_values, y_values
 
 

@@ -1,18 +1,15 @@
 import time
-from functools import partial
 from typing import Dict
 
 import jax.numpy as jnp
-from jax import default_backend, vmap
+from jax import default_backend
 from jax import random
 
 import cgpax
-from cgpax.evaluation.boolean_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
-from cgpax.functions import function_set_boolean
+from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions_boolean
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom
-from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary, \
-    update_config_with_data, load_dataset
+from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary
 from cgpax.standard import individual
 
 
@@ -22,21 +19,10 @@ def run_gomea_boolean(config: Dict) -> None:
 
     rnd_key = random.PRNGKey(config["seed"])
 
-    x_values, y_values = load_dataset(config["problem"])
-
-    # assert this
-    config["use_input_constants"] = False
-
-    update_config_with_data(config, x_values.shape[1], y_values.shape[1], function_set=function_set_boolean)
-
-    # preliminary evo steps
+    # compose genome eval
+    genomes_to_fitnesses, _ = prepare_evaluation_functions_boolean(config)
     genome_mask, mutation_mask = compute_masks(config)
     genome_transformation_function = compute_genome_transformation_function(config)
-    genome_evaluation_function = evaluate_cgp_genome if config["solver"] == "cgp" else evaluate_lgp_genome
-    genome_to_fitness = partial(genome_evaluation_function, config=config, x_values=x_values, y_values=y_values)
-
-    def genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> jnp.ndarray:
-        return vmap(genome_to_fitness)(genotypes)["accuracy"]
 
     rnd_key, genome_key = random.split(rnd_key, 2)
     genomes = individual.generate_population(pop_size=config["n_individuals"],
@@ -56,7 +42,7 @@ def run_gomea_boolean(config: Dict) -> None:
         f"FITNESS: {jnp.max(fitnesses)} \t "
         f"E: {eval_time:.2f} \t"
     )
-    with open(f"results/{config['run_name']}.csv", "a") as csv_file:
+    with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
         csv_file.write("evaluation,fitness,time\n")
         csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
@@ -76,7 +62,7 @@ def run_gomea_boolean(config: Dict) -> None:
         times["gom_time"] = time.process_time() - gom_start_time
         avg_gom_time = times["gom_time"] / len(fos)
 
-        with open(f"results/{config['run_name']}.csv", "a") as csv_file:
+        with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
             for details_dict in fitnesses_history:
                 csv_file.write(
                     f"{_fitness_evaluation + details_dict['evaluation']},{details_dict['max_fitness']},{avg_gom_time:.2f}\n"
@@ -104,7 +90,7 @@ if __name__ == '__main__':
 
     entity, project = "giorgianadizar", "cgpax"
 
-    config_files = ["configs/graph_gp_gomea_boolean.yaml"]
+    config_files = ["../configs/graph_gp_gomea_boolean.yaml"]
     unpacked_configs = []
 
     for config_file in config_files:
