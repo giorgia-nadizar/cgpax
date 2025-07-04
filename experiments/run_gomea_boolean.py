@@ -6,7 +6,7 @@ from jax import default_backend
 from jax import random
 
 import cgpax
-from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions_boolean
+from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom
 from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary
@@ -20,7 +20,7 @@ def run_gomea_boolean(config: Dict) -> None:
     rnd_key = random.PRNGKey(config["seed"])
 
     # compose genome eval
-    genomes_to_fitnesses, _ = prepare_evaluation_functions_boolean(config)
+    genomes_to_fitnesses, _ = prepare_evaluation_functions(config)
     genome_mask, mutation_mask = compute_masks(config)
     genome_transformation_function = compute_genome_transformation_function(config)
 
@@ -98,6 +98,7 @@ if __name__ == '__main__':
 
     print(f"Total configs found: {len(unpacked_configs)}")
     for count, cfg in enumerate(unpacked_configs):
+        cfg["problem_type"] = "boolean"
         cfg["run_name"] = f"gomea_{cfg['solver']}_{cfg['problem']}_{cfg['seed']}"
         print(cfg["run_name"])
         run_gomea_boolean(cfg)

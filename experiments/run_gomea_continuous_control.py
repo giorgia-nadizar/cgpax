@@ -1,17 +1,16 @@
 import time
-from functools import partial
 from typing import Dict
 
 import jax.numpy as jnp
-from jax import jit, default_backend
+from jax import default_backend
 from jax import random
 
 import cgpax
-from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions_continuous_control
+from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom, parallel_forced_improvement
-from cgpax.run_utils import update_config_with_env_data, init_environment_from_config, compute_masks, \
-    compile_genome_evaluation, compute_genome_transformation_function, process_dictionary
+from cgpax.run_utils import compute_masks, \
+    compute_genome_transformation_function, process_dictionary
 from cgpax.standard import individual
 
 
@@ -24,7 +23,7 @@ def run_gomea_continuous_control(config: Dict) -> None:
     rnd_key = random.PRNGKey(config["seed"])
 
     # compose genome eval
-    genomes_to_fitnesses, _ = prepare_evaluation_functions_continuous_control(config)
+    genomes_to_fitnesses, _ = prepare_evaluation_functions(config)
     genome_mask, mutation_mask = compute_masks(config)
     genome_transformation_function = compute_genome_transformation_function(config)
 
@@ -152,6 +151,7 @@ if __name__ == '__main__':
 
     print(f"Total configs found: {len(unpacked_configs)}")
     for count, cfg in enumerate(unpacked_configs):
+        cfg["problem_type"] = "continuous_control"
         env_name = cfg['problem']['environment'].lower().split("-")[0]
         cfg["run_name"] = f"gomea_{cfg['solver']}_{env_name}_{cfg['seed']}"
         print(cfg["run_name"])
