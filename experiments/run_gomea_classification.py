@@ -14,15 +14,15 @@ from cgpax.functions import function_set_numeric
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom
 from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary, \
-    update_config_with_data, \
-    load_dataset
+    update_config_with_data, load_dataset
 from cgpax.standard import individual
 
 
 def run_gomea_classification(config: Dict) -> None:
-    rnd_key = random.PRNGKey(config["seed"])
+    if "n_evaluations" not in config:
+        config["n_evaluations"] = config["n_generations"] * config["n_individuals"]
 
-    x_values, y_values = load_dataset(config["problem"])
+    rnd_key = random.PRNGKey(config["seed"])
 
     x_values, y_values = load_dataset(config["problem"])
     n_classes = len(set(y_values))
@@ -44,7 +44,7 @@ def run_gomea_classification(config: Dict) -> None:
     genome_evaluation_function = evaluate_cgp_genome if config["solver"] == "cgp" else evaluate_lgp_genome
     genome_to_fitness = partial(genome_evaluation_function, config=config, x_values=x_values, y_values=y_values)
 
-    def genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> float:
+    def genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> jnp.ndarray:
         return vmap(genome_to_fitness)(genotypes)["accuracy"]
 
     def genomes_to_test_accuracy(genotype: jnp.ndarray, fake_rnd_key: random.PRNGKey = None) -> float:
@@ -58,23 +58,23 @@ def run_gomea_classification(config: Dict) -> None:
     bias_matrix = None  # init needed for gom
 
     # evaluate population
-    _generation = 0
+    _fitness_evaluation = 0
 
     start_eval_time = time.time()
     fitnesses = genomes_to_fitnesses(genomes)
     eval_time = time.time() - start_eval_time
     print(
-        f"{_generation} \t"
+        f"{_fitness_evaluation} \t"
         f"FITNESS: {jnp.max(fitnesses)} \t "
         f"E: {eval_time:.2f} \t"
     )
     with open(f"results/{config['run_name']}.csv", "w") as csv_file:
-        csv_file.write("iteration,fitness,test_accuracy,time\n")
+        csv_file.write("evaluation,fitness,test_accuracy,time\n")
         csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
     times = {}
     # evolutionary loop
-    while _generation < config["n_generations"]:
+    while _fitness_evaluation < config["n_evaluations"]:
         # fos computation
         fos_start_time = time.process_time()
         rnd_key, fos_key = random.split(rnd_key, 2)
@@ -82,7 +82,6 @@ def run_gomea_classification(config: Dict) -> None:
         times["fos_time"] = time.process_time() - fos_start_time
         print("FOS DONE")
 
-        # each gomea round has this many iterations within it
         gom_start_time = time.process_time()
         genomes, fitnesses, fitnesses_history, test_accuracies_history = parallel_gom(genomes, fitnesses, fos,
                                                                                       genomes_to_fitnesses, rnd_key,
@@ -93,16 +92,17 @@ def run_gomea_classification(config: Dict) -> None:
         avg_gom_time = times["gom_time"] / len(fos)
 
         with open(f"results/{config['run_name']}.csv", "a") as csv_file:
-            for fit_idx, fit_hist in enumerate(fitnesses_history):
+            for details_dict in fitnesses_history:
                 csv_file.write(
-                    f"{_generation + fit_idx},{fit_hist},{test_accuracies_history[fit_idx]},{avg_gom_time:.2f}\n"
+                    f"{_fitness_evaluation + details_dict['evaluation']},{details_dict['max_fitness']},"
+                    f"{details_dict['test_accuracy']},{avg_gom_time:.2f}\n"
                 )
 
-        _generation += len(fos)
+        _fitness_evaluation += len(fos) * len(genomes)
 
         # print progress
         print(
-            f"{_generation} \t"
+            f"{_fitness_evaluation} \t"
             f"F: {times['fos_time']:.2f} \t"
             f"G: {times['gom_time']:.2f} \t"
             f"FITNESS: {jnp.max(fitnesses)}"
