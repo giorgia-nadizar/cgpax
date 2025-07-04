@@ -11,7 +11,6 @@ from brax import envs
 from brax.envs import ant
 from brax.envs.wrappers import EpisodeWrapper
 from gymnasium import Env
-from gymnasium.spaces import Discrete, Box
 from sklearn import datasets
 from wandb.apis.public import Run
 import gymnasium as gym
@@ -19,7 +18,7 @@ import gymnasium as gym
 from jax import vmap, jit, random
 import jax.numpy as jnp
 
-from cgpax.control_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
+from cgpax.evaluation.control_evaluation import evaluate_cgp_genome, evaluate_cgp_genome_n_times, evaluate_lgp_genome, \
     evaluate_lgp_genome_n_times, evaluate_program_discrete_gymnasium
 from cgpax.functions import function_set_numeric, constants
 from cgpax.selection import truncation_selection, tournament_selection, fp_selection, composed_selection
