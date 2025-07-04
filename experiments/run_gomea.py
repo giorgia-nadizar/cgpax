@@ -139,11 +139,17 @@ def run_gomea(config: Dict) -> None:
             if jnp.max(fitnesses) > elite_fitness:
                 elite_fitness = jnp.max(fitnesses)
                 elite_individual = offspring_genomes[jnp.argmax(fitnesses)]
+                elite_test_accuracy = None
+                if genome_to_test_accuracy is not None:
+                    for details_dict in history_dicts:
+                        if details_dict["max_fitness"] == elite_fitness:
+                            elite_test_accuracy = details_dict["test_accuracy"]
+
                 # if forced improvement gave better results, keep track of them
-                # TODO check about test thingy
                 with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
                     csv_file.write(
                         f"{_fitness_evaluation},{elite_fitness},"
+                        f"{elite_test_accuracy if genome_to_test_accuracy is not None else ''}"
                         f"{',' if genome_to_test_accuracy is not None else ''}"
                         f"{avg_gom_time:.2f}\n"
                     )
@@ -153,8 +159,7 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    # problems = ["boolean", "classification", "discrete_control", "continuous_control"]
-    problem_types = ["discrete_control"]
+    problems = ["boolean", "classification", "discrete_control", "continuous_control"]
 
     for problem_type in problem_types:
 
