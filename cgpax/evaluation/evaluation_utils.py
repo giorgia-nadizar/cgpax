@@ -59,8 +59,10 @@ def _prepare_evaluation_functions_continuous_control(config: Dict) -> Tuple[Call
 
     # compose genome eval
     def _genomes_to_fitnesses(gs: jnp.ndarray, rnd_keys: jnp.ndarray) -> jnp.ndarray:
-        evaluation_outcomes = evaluate_genomes(gs, jnp.array(rnd_keys))
-        return replace_invalid_nan_reward(evaluation_outcomes["cum_reward"])
+        fitness_values = evaluate_genomes(gs, jnp.array(rnd_keys))["cum_reward"]
+        if config["n_evals_per_individual"] > 1:
+            fitness_values = jnp.median(fitness_values, axis=1)
+        return replace_invalid_nan_reward(fitness_values)
 
     return _genomes_to_fitnesses, None
 
