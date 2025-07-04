@@ -23,7 +23,21 @@ from cgpax.evaluation.classification_evaluation import evaluate_lgp_genome as cl
 from cgpax.functions import function_set_numeric
 
 
-def prepare_evaluation_functions_discrete_control(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
+def prepare_evaluation_functions(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
+    problem_type = config["problem_type"]
+    if problem_type == "discrete_control":
+        return _prepare_evaluation_functions_discrete_control(config)
+    elif problem_type == "continuous_control":
+        return _prepare_evaluation_functions_continuous_control(config)
+    elif problem_type == "boolean":
+        return _prepare_evaluation_functions_boolean(config)
+    elif problem_type == "classification":
+        return _prepare_evaluation_functions_classification(config)
+    else:
+        raise ValueError(f"Unknown problem type: {problem_type}")
+
+
+def _prepare_evaluation_functions_discrete_control(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
     environment = init_environment_from_config(config)
     update_config_with_env_data(config, environment)
     evaluate_genomes = compile_genome_evaluation(config, environment, config["problem"]["episode_length"])
@@ -37,7 +51,7 @@ def prepare_evaluation_functions_discrete_control(config: Dict) -> Tuple[Callabl
     return _genomes_to_fitnesses, None
 
 
-def prepare_evaluation_functions_continuous_control(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
+def _prepare_evaluation_functions_continuous_control(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
     environment = init_environment_from_config(config)
     update_config_with_env_data(config, environment)
     evaluate_genomes = compile_genome_evaluation(config, environment, config["problem"]["episode_length"])
@@ -51,7 +65,7 @@ def prepare_evaluation_functions_continuous_control(config: Dict) -> Tuple[Calla
     return _genomes_to_fitnesses, None
 
 
-def prepare_evaluation_functions_boolean(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
+def _prepare_evaluation_functions_boolean(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
     config["use_input_constants"] = False
     x_values, y_values = load_dataset(config["problem"])
     update_config_with_data(config, x_values.shape[1], y_values.shape[1], function_set=function_set_boolean)
@@ -65,7 +79,7 @@ def prepare_evaluation_functions_boolean(config: Dict) -> Tuple[Callable, Union[
     return _genomes_to_fitnesses, None
 
 
-def prepare_evaluation_functions_classification(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
+def _prepare_evaluation_functions_classification(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
     x_values, y_values = load_dataset(config["problem"])
     n_classes = len(set(y_values))
     train_size = config.get("train_size", 0.8)
