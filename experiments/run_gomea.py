@@ -159,7 +159,7 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    problems = ["boolean", "classification", "discrete_control", "continuous_control"]
+    problem_types = ["boolean", "classification", "discrete_control", "continuous_control"]
 
     for problem_type in problem_types:
 
