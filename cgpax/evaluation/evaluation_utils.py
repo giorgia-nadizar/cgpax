@@ -31,9 +31,22 @@ def prepare_evaluation_functions_discrete_control(config: Dict) -> Tuple[Callabl
 
     # compose genome eval
     def _genomes_to_fitnesses(gs: jnp.ndarray, rnd_keys: jnp.ndarray) -> jnp.ndarray:
-        evaluation_outcomes = evaluate_genomes(gs, jnp.array(rnd_keys))
-        cumulative_rewards = evaluation_outcomes
+        cumulative_rewards = evaluate_genomes(gs, jnp.array(rnd_keys))
         return replace_invalid_nan_reward(cumulative_rewards)
+
+    return _genomes_to_fitnesses, None
+
+
+def prepare_evaluation_functions_continuous_control(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
+    environment = init_environment_from_config(config)
+    update_config_with_env_data(config, environment)
+    evaluate_genomes = compile_genome_evaluation(config, environment, config["problem"]["episode_length"])
+    replace_invalid_nan_reward = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
+
+    # compose genome eval
+    def _genomes_to_fitnesses(gs: jnp.ndarray, rnd_keys: jnp.ndarray) -> jnp.ndarray:
+        evaluation_outcomes = evaluate_genomes(gs, jnp.array(rnd_keys))
+        return replace_invalid_nan_reward(evaluation_outcomes["cum_reward"])
 
     return _genomes_to_fitnesses, None
 
