@@ -1,20 +1,15 @@
 import time
-from functools import partial
 from typing import Dict
 
 import jax.numpy as jnp
-from jax import default_backend, vmap
+from jax import default_backend
 from jax import random
-from sklearn.model_selection import train_test_split
-from sklearn.preprocessing import StandardScaler
 
 import cgpax
-from cgpax.evaluation.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
-from cgpax.functions import function_set_numeric
+from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions_classification
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom
-from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary, \
-    update_config_with_data, load_dataset
+from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary
 from cgpax.standard import individual
 
 
@@ -24,36 +19,17 @@ def run_gomea_classification(config: Dict) -> None:
 
     rnd_key = random.PRNGKey(config["seed"])
 
-    x_values, y_values = load_dataset(config["problem"])
-    n_classes = len(set(y_values))
-    train_size = config.get("train_size", 0.8)
-
-    # split train and test
-    x_train, x_test, y_train, y_test = train_test_split(x_values, y_values, test_size=(1. - train_size))
-
-    # standardize
-    scaler = StandardScaler()
-    x_train = scaler.fit_transform(x_train)
-    x_test = scaler.transform(x_test)
-
-    update_config_with_data(config, x_train.shape[1], n_classes, function_set=function_set_numeric)
-
-    # preliminary evo steps
+    # compose genome eval
+    genomes_to_fitnesses, genome_to_test_accuracy = prepare_evaluation_functions_classification(config)
     genome_mask, mutation_mask = compute_masks(config)
     genome_transformation_function = compute_genome_transformation_function(config)
-    genome_evaluation_function = evaluate_cgp_genome if config["solver"] == "cgp" else evaluate_lgp_genome
-    genome_to_fitness = partial(genome_evaluation_function, config=config, x_values=x_values, y_values=y_values)
-
-    def genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> jnp.ndarray:
-        return vmap(genome_to_fitness)(genotypes)["accuracy"]
-
-    def genomes_to_test_accuracy(genotype: jnp.ndarray, fake_rnd_key: random.PRNGKey = None) -> float:
-        return genome_evaluation_function(genotype, config=config, x_values=x_test, y_values=y_test)["accuracy"]
 
     rnd_key, genome_key = random.split(rnd_key, 2)
     genomes = individual.generate_population(pop_size=config["n_individuals"],
                                              genome_mask=genome_mask, rnd_key=genome_key,
                                              genome_transformation_function=genome_transformation_function)
+
+    bias_matrix = None  # init needed for gom
 
     bias_matrix = None  # init needed for gom
 
@@ -68,7 +44,7 @@ def run_gomea_classification(config: Dict) -> None:
         f"FITNESS: {jnp.max(fitnesses)} \t "
         f"E: {eval_time:.2f} \t"
     )
-    with open(f"results/{config['run_name']}.csv", "w") as csv_file:
+    with open(f"../results/{config['run_name']}.csv", "w") as csv_file:
         csv_file.write("evaluation,fitness,test_accuracy,time\n")
         csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
@@ -87,11 +63,11 @@ def run_gomea_classification(config: Dict) -> None:
                                                                                       genomes_to_fitnesses, rnd_key,
                                                                                       track_fitnesses=True,
                                                                                       intermediate_prints=True,
-                                                                                      test_eval_fn=genomes_to_test_accuracy)
+                                                                                      test_eval_fn=genome_to_test_accuracy)
         times["gom_time"] = time.process_time() - gom_start_time
         avg_gom_time = times["gom_time"] / len(fos)
 
-        with open(f"results/{config['run_name']}.csv", "a") as csv_file:
+        with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
             for details_dict in fitnesses_history:
                 csv_file.write(
                     f"{_fitness_evaluation + details_dict['evaluation']},{details_dict['max_fitness']},"
@@ -118,7 +94,7 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    config_files = ["configs/graph_gp_gomea_classification.yaml"]
+    config_files = ["../configs/graph_gp_gomea_classification.yaml"]
     unpacked_configs = []
 
     for config_file in config_files:
