@@ -9,8 +9,7 @@ import cgpax
 from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom, parallel_forced_improvement
-from cgpax.run_utils import compute_masks, \
-    compute_genome_transformation_function, process_dictionary
+from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary
 from cgpax.standard import individual
 
 
@@ -66,7 +65,6 @@ def run_gomea(config: Dict) -> None:
         offspring_genomes, fitnesses, fitnesses_history = parallel_gom(genomes, fitnesses, fos,
                                                                        genomes_to_fitnesses,
                                                                        gom_key,
-                                                                       track_fitnesses=True,
                                                                        intermediate_prints=True,
                                                                        test_eval_fn=genome_to_test_accuracy
                                                                        )

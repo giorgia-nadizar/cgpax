@@ -20,10 +20,9 @@ def parallel_gom(
         fos: List[List[int]],
         eval_fn: Callable[[jnp.ndarray, jnp.ndarray], jnp.ndarray],
         rnd_key: random.PRNGKey,
-        track_fitnesses: bool = False,
         intermediate_prints: bool = False,
         test_eval_fn: Callable[[jnp.ndarray, random.PRNGKey], float] = None,
-) -> Union[Tuple[jnp.ndarray, jnp.ndarray], Tuple[jnp.ndarray, jnp.ndarray, List[Dict]]]:
+) -> Tuple[jnp.ndarray, jnp.ndarray, List[Dict]]:
     mutation_fn = partial(_gom_mutate, donors=donors)
     array_fos = [jnp.asarray(f) for f in fos]
     shuffled_fos = [rnd.sample(array_fos, len(array_fos)) for _ in donors]
@@ -58,10 +57,7 @@ def parallel_gom(
 
         history_dicts.append(current_iteration_dict)
 
-    if track_fitnesses:
-        return genotypes, fitnesses, history_dicts
-    else:
-        return genotypes, fitnesses
+    return genotypes, fitnesses, history_dicts
 
 
 @jit
