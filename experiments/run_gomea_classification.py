@@ -9,7 +9,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
 import cgpax
-from cgpax.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
+from cgpax.evaluation.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
 from cgpax.functions import function_set_numeric
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom

@@ -8,7 +8,7 @@ from jax import random
 from wandb.sdk.wandb_run import Run
 
 import cgpax
-from cgpax.boolean_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
+from cgpax.evaluation.boolean_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
 from cgpax.functions import function_set_boolean
 from cgpax.run_utils import compile_parents_selection, compile_mutation, \
     compute_masks, compute_genome_transformation_function, compile_survival_selection, compile_crossover, \

@@ -11,7 +11,7 @@ from sklearn.preprocessing import StandardScaler
 from wandb.sdk.wandb_run import Run
 
 import cgpax
-from cgpax.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
+from cgpax.evaluation.classification_evaluation import evaluate_cgp_genome, evaluate_lgp_genome
 from cgpax.functions import function_set_numeric
 from cgpax.run_utils import compile_parents_selection, compile_mutation, \
     compute_masks, compute_genome_transformation_function, compile_survival_selection, compile_crossover, \
