@@ -8,7 +8,7 @@ from jax import random
 
 import cgpax
 from cgpax.gomea.fos import compute_fos
-from cgpax.gomea.gom import parallel_gom
+from cgpax.gomea.gom import parallel_gom, parallel_forced_improvement
 from cgpax.run_utils import update_config_with_env_data, init_environment_from_config, compute_masks, \
     compile_genome_evaluation, compute_genome_transformation_function, process_dictionary
 from cgpax.standard import individual
@@ -18,7 +18,8 @@ def run_gomea_continuous_control(config: Dict) -> None:
     if "n_evaluations" not in config:
         config["n_evaluations"] = config["n_generations"] * config["n_individuals"]
 
-    rnd_key = random.PRNGKey(config["seed"])
+    forced_improvement = config.get("forced_improvement", False)
+    forced_improvement_generations_threshold = 1 + jnp.log10(config["n_individuals"])
 
     environment = init_environment_from_config(config)
     update_config_with_env_data(config, environment)
@@ -36,6 +37,7 @@ def run_gomea_continuous_control(config: Dict) -> None:
         evaluation_outcomes = evaluate_genomes(gs, jnp.array(rnd_keys))
         return replace_invalid_nan_reward(evaluation_outcomes["cum_reward"])
 
+    rnd_key = random.PRNGKey(config["seed"])
     rnd_key, genome_key = random.split(rnd_key, 2)
     genomes = individual.generate_population(pop_size=config["n_individuals"],
                                              genome_mask=genome_mask, rnd_key=genome_key,
@@ -59,6 +61,9 @@ def run_gomea_continuous_control(config: Dict) -> None:
 
     times = {}
     # evolutionary loop
+    elite_fitness = -jnp.inf
+    elite_individual = None
+    no_fitness_improvement_generations = 0
     while _fitness_evaluation < config["n_evaluations"]:
         # fos computation
         fos_start_time = time.process_time()
@@ -67,9 +72,11 @@ def run_gomea_continuous_control(config: Dict) -> None:
         times["fos_time"] = time.process_time() - fos_start_time
         print("FOS DONE")
 
+        rnd_key, gom_key = random.split(rnd_key, 2)
         gom_start_time = time.process_time()
-        genomes, fitnesses, fitnesses_history = parallel_gom(genomes, fitnesses, fos, genomes_to_fitnesses, rnd_key,
-                                                             track_fitnesses=True, intermediate_prints=True)
+        offspring_genomes, fitnesses, fitnesses_history = parallel_gom(genomes, fitnesses, fos, genomes_to_fitnesses,
+                                                                       gom_key, track_fitnesses=True,
+                                                                       intermediate_prints=True)
         times["gom_time"] = time.process_time() - gom_start_time
         avg_gom_time = times["gom_time"] / len(fos)
 
@@ -79,7 +86,7 @@ def run_gomea_continuous_control(config: Dict) -> None:
                     f"{_fitness_evaluation + details_dict['evaluation']},{details_dict['max_fitness']},{avg_gom_time:.2f}\n"
                 )
 
-        _fitness_evaluation += len(fos) * len(genomes)
+        _fitness_evaluation += len(fos) * len(offspring_genomes)
 
         # print progress
         print(
@@ -88,6 +95,59 @@ def run_gomea_continuous_control(config: Dict) -> None:
             f"G: {times['gom_time']:.2f} \t"
             f"FITNESS: {jnp.max(fitnesses)}"
         )
+
+        if jnp.max(fitnesses) == elite_fitness:
+            no_fitness_improvement_generations += 1
+        else:
+            elite_fitness = jnp.max(fitnesses)
+            elite_individual = offspring_genomes[jnp.argmax(fitnesses)]
+
+        rnd_key, forced_impro_key = random.split(rnd_key, 2)
+        if forced_improvement:
+            # no improvements stretch
+            if no_fitness_improvement_generations >= forced_improvement_generations_threshold:
+                print("global forced improvement due to no improvements stretch")
+                genomes, fitnesses, history_dicts, evals_done = parallel_forced_improvement(
+                    offspring_genomes,
+                    fitnesses,
+                    elite_individual,
+                    elite_fitness,
+                    fos,
+                    genomes_to_fitnesses,
+                    forced_impro_key,
+                    True
+                )
+            else:
+                unchanged_genomes_ids = jnp.where(jnp.all(genomes == offspring_genomes, axis=1))[0]
+                if len(unchanged_genomes_ids) == 0:
+                    continue
+                print("forced improvement on not changed genomes")
+                unchanged_genomes = genomes[unchanged_genomes_ids]
+                unchanged_fitnesses = fitnesses[unchanged_genomes_ids]
+                forced_improved_genomes, forced_improved_fitnesses, history_dicts, evals_done = parallel_forced_improvement(
+                    unchanged_genomes,
+                    unchanged_fitnesses,
+                    elite_individual,
+                    elite_fitness,
+                    fos,
+                    genomes_to_fitnesses,
+                    forced_impro_key,
+                    True
+                )
+                genomes = offspring_genomes
+                genomes = genomes.at[unchanged_genomes_ids].set(forced_improved_genomes)
+                fitnesses = fitnesses.at[unchanged_genomes_ids].set(forced_improved_fitnesses)
+
+            _fitness_evaluation += evals_done
+
+            if jnp.max(fitnesses) > elite_fitness:
+                elite_fitness = jnp.max(fitnesses)
+                elite_individual = offspring_genomes[jnp.argmax(fitnesses)]
+                # if forced improvement gave better results, keep track of them
+                with open(f"results/{config['run_name']}.csv", "a") as csv_file:
+                    csv_file.write(
+                        f"{_fitness_evaluation},{elite_fitness},{avg_gom_time:.2f}\n"
+                    )
 
 
 if __name__ == '__main__':
