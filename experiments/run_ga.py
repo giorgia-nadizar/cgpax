@@ -53,7 +53,7 @@ def run_ga(config: Dict) -> None:
             best_individual = genomes[jnp.argmax(fitnesses)]
             best_test_accuracy = genome_to_test_accuracy(best_individual)
 
-        with open(f"results/{cfg['run_name']}.csv", "a") as csv_file:
+        with open(f"../results/{cfg['run_name']}.csv", "a") as csv_file:
             csv_file.write(f"{_generation * len(fitnesses)},{jnp.max(fitnesses)},"
                            f"{best_test_accuracy if genome_to_test_accuracy is not None else ''}"
                            f"{',' if genome_to_test_accuracy is not None else ''}"
@@ -118,12 +118,12 @@ if __name__ == '__main__':
             unpacked_configs += process_dictionary(cgpax.get_config(config_file))
 
         print(f"\n\nRunning {problem_type}...")
-        print(f"Total configs found: {2 * len(unpacked_configs)}")
+        print(f"Total configs found: {len(unpacked_configs)}")
         for cfg in unpacked_configs:
             cfg["problem_type"] = problem_type
             problem_name = cfg['problem']['environment'].lower().split("-")[0] if "control" in problem_type \
                 else cfg['problem']
-            cfg["run_name"] = f"gomea_{cfg['solver']}_{problem_name}_{cfg['fos_mode']}_{cfg['seed']}"
+            cfg["run_name"] = f"ga_{cfg['solver']}_{problem_name}_{cfg['seed']}"
             print(cfg["run_name"])
             run_ga(cfg)
             print()
