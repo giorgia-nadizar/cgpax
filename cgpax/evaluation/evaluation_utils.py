@@ -15,6 +15,10 @@ from cgpax.evaluation.boolean_evaluation import evaluate_cgp_genome as boolean_e
 from cgpax.evaluation.boolean_evaluation import evaluate_lgp_genome as boolean_evaluate_lgp_genome
 from cgpax.functions import function_set_boolean
 
+# regression only
+from cgpax.evaluation.regression_evaluation import evaluate_cgp_genome as regression_evaluate_cgp_genome
+from cgpax.evaluation.regression_evaluation import evaluate_lgp_genome as regression_evaluate_lgp_genome
+
 # classification only
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -33,6 +37,8 @@ def prepare_evaluation_functions(config: Dict) -> Tuple[Callable, Union[Callable
         return _prepare_evaluation_functions_boolean(config)
     elif problem_type == "classification":
         return _prepare_evaluation_functions_classification(config)
+    elif problem_type == "regression":
+        return _prepare_evaluation_functions_regression(config)
     else:
         raise ValueError(f"Unknown problem type: {problem_type}")
 
@@ -71,14 +77,41 @@ def _prepare_evaluation_functions_boolean(config: Dict) -> Tuple[Callable, Union
     config["use_input_constants"] = False
     x_values, y_values = load_dataset(config["problem"])
     update_config_with_data(config, x_values.shape[1], y_values.shape[1], function_set=function_set_boolean)
-    genome_evaluation_function = boolean_evaluate_cgp_genome if config[
-                                                                    "solver"] == "cgp" else boolean_evaluate_lgp_genome
+    genome_evaluation_function = boolean_evaluate_cgp_genome if config["solver"] == "cgp" \
+        else boolean_evaluate_lgp_genome
     genome_to_fitness = partial(genome_evaluation_function, config=config, x_values=x_values, y_values=y_values)
 
     def _genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> jnp.ndarray:
         return vmap(genome_to_fitness)(genotypes)["accuracy"]
 
     return _genomes_to_fitnesses, None
+
+
+def _prepare_evaluation_functions_regression(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
+    x_values, y_values = load_dataset(config["problem"])
+    train_size = config.get("train_size", 0.7)
+
+    # split train and test
+    x_train, x_test, y_train, y_test = train_test_split(x_values, y_values, test_size=(1. - train_size))
+    #
+    # # standardize
+    # scaler = StandardScaler()
+    # x_train = scaler.fit_transform(x_train)
+    # x_test = scaler.transform(x_test)
+
+    update_config_with_data(config, x_train.shape[1], y_train.shape[1], function_set=function_set_numeric)
+
+    genome_evaluation_function = regression_evaluate_cgp_genome if config["solver"] == "cgp" \
+        else regression_evaluate_lgp_genome
+    genome_to_fitness = partial(genome_evaluation_function, config=config, x_values=x_values, y_values=y_values)
+
+    def _genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> jnp.ndarray:
+        return vmap(genome_to_fitness)(genotypes)["accuracy"]
+
+    def _genome_to_test_accuracy(genotype: jnp.ndarray, fake_rnd_key: random.PRNGKey = None) -> float:
+        return genome_evaluation_function(genotype, config=config, x_values=x_test, y_values=y_test)["accuracy"]
+
+    return _genomes_to_fitnesses, _genome_to_test_accuracy
 
 
 def _prepare_evaluation_functions_classification(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
