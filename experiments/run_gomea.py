@@ -173,7 +173,7 @@ if __name__ == '__main__':
             unpacked_configs += process_dictionary(cgpax.get_config(config_file))
 
         print(f"\n\nRunning {problem_type}...")
-        print(f"Total configs found: {2 * len(unpacked_configs)}")
+        print(f"Total configs found: {len(unpacked_configs)}")
         for cfg in unpacked_configs:
             cfg["problem_type"] = problem_type
             problem_name = cfg['problem']['environment'].lower().split("-")[0] if "control" in problem_type \
