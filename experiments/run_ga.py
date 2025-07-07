@@ -44,9 +44,7 @@ def run_gomea(config: Dict) -> None:
         f"E: {eval_time:.2f} \t"
     )
     with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
-        csv_file.write(f"evaluation,fitness,"
-                       f"{'test_accuracy,' if genome_to_test_accuracy is not None else ''}"
-                       f"time\n")
+        csv_file.write("evaluation,fitness,time\n")
         csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
     times = {}
