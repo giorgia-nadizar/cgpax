@@ -159,7 +159,8 @@ if __name__ == '__main__':
 
     print(f"Starting the run with {default_backend()} as backend...")
 
-    problem_types = ["boolean", "classification", "discrete_control", "continuous_control"]
+    # problem_types = ["boolean", "classification", "regression", "discrete_control", "continuous_control"]
+    problem_types = ["regression"]
 
     for problem_type in problem_types:
 
@@ -171,14 +172,11 @@ if __name__ == '__main__':
 
         print(f"\n\nRunning {problem_type}...")
         print(f"Total configs found: {2 * len(unpacked_configs)}")
-        for fos_mode in ["U", "RT"]:
-            for cfg in unpacked_configs:
-                cfg["problem_type"] = problem_type
-                problem_name = cfg['problem']['environment'].lower().split("-")[0] if "control" in problem_type \
-                    else cfg['problem']
-                cfg["fos_mode"] = fos_mode
-                cfg[
-                    "run_name"] = f"gomea_{cfg['solver']}_{problem_name}_{cfg['fos_mode']}_{cfg['seed']}"
-                print(cfg["run_name"])
-                run_gomea(cfg)
-                print()
+        for cfg in unpacked_configs:
+            cfg["problem_type"] = problem_type
+            problem_name = cfg['problem']['environment'].lower().split("-")[0] if "control" in problem_type \
+                else cfg['problem']
+            cfg["run_name"] = f"gomea_{cfg['solver']}_{problem_name}_{cfg['fos_mode']}_{cfg['seed']}"
+            print(cfg["run_name"])
+            run_gomea(cfg)
+            print()
