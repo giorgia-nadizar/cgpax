@@ -100,13 +100,14 @@ def _prepare_evaluation_functions_regression(config: Dict) -> Tuple[Callable, Un
     # x_test = scaler.transform(x_test)
 
     update_config_with_data(config, x_train.shape[1], y_train.shape[1], function_set=function_set_numeric)
-
+    replace_invalid_nan_accuracy = jit(partial(jnp.nan_to_num, nan=config["nan_replacement"]))
     genome_evaluation_function = regression_evaluate_cgp_genome if config["solver"] == "cgp" \
         else regression_evaluate_lgp_genome
     genome_to_fitness = partial(genome_evaluation_function, config=config, x_values=x_values, y_values=y_values)
 
     def _genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> jnp.ndarray:
-        return vmap(genome_to_fitness)(genotypes)["accuracy"]
+        accuracies = vmap(genome_to_fitness)(genotypes)["accuracy"]
+        return replace_invalid_nan_accuracy(accuracies)
 
     def _genome_to_test_accuracy(genotype: jnp.ndarray, fake_rnd_key: random.PRNGKey = None) -> float:
         return genome_evaluation_function(genotype, config=config, x_values=x_test, y_values=y_test)["accuracy"]
