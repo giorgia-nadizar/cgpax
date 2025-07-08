@@ -4,7 +4,7 @@ import functools
 from datetime import datetime
 from functools import partial, reduce
 from multiprocessing import Pool
-from typing import List, Callable, Tuple, Dict, Union, Set
+from typing import List, Callable, Tuple, Dict, Union, Set, Any
 
 import telegram
 from brax import envs
@@ -440,3 +440,27 @@ def _unpack_dictionary(config: Dict) -> List[Dict]:
 def process_dictionary(config: Dict, nesting_keyword: str = "nested") -> List[Dict]:
     config_list = _unnest_dictionary_recursive(config, nesting_keyword)
     return list(reduce(lambda x, y: x + y, [_unpack_dictionary(x) for x in config_list], []))
+
+
+def _try_parse_number(value: str) -> Union[int, float, str]:
+    try:
+        return int(value)
+    except ValueError:
+        try:
+            return float(value)
+        except ValueError:
+            return value
+
+
+def parse_args(argv: List[str]) -> Dict[str, Any]:
+    args = {}
+    current_key = None
+    for arg in argv:
+        if arg.startswith("--"):
+            current_key = arg.lstrip("-")
+            args[current_key] = True  # Default True for flags with no value
+        else:
+            if current_key:
+                args[current_key] = _try_parse_number(arg)
+                current_key = None
+    return args
