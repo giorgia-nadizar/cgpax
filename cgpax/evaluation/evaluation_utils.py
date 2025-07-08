@@ -106,9 +106,7 @@ def _prepare_evaluation_functions_regression(config: Dict) -> Tuple[Callable, Un
     genome_to_fitness = partial(genome_evaluation_function, config=config, x_values=x_train, y_values=y_train)
 
     def _genomes_to_fitnesses(genotypes: jnp.ndarray, fake_rnd_keys: jnp.ndarray = None) -> jnp.ndarray:
-        return_values = vmap(genome_to_fitness)(genotypes)
-        print(return_values)
-        accuracies = return_values["r2"]
+        accuracies = vmap(genome_to_fitness)(genotypes)["r2"]
         return replace_invalid_nan_accuracy(accuracies)
 
     def _genome_to_test_accuracy(genotype: jnp.ndarray, fake_rnd_key: random.PRNGKey = None) -> float:
