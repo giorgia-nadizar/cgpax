@@ -1,3 +1,4 @@
+import sys
 import time
 from typing import Dict
 
@@ -10,7 +11,7 @@ from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions
 from cgpax.gomea.fos import compute_fos
 from cgpax.gomea.gom import parallel_gom, parallel_forced_improvement
 from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary, \
-    compile_parents_selection, compile_crossover, compile_mutation, compile_survival_selection
+    compile_parents_selection, compile_crossover, compile_mutation, compile_survival_selection, parse_args
 from cgpax.standard import individual
 
 
@@ -108,6 +109,7 @@ if __name__ == '__main__':
 
     # problem_types = ["boolean", "classification", "regression", "discrete_control", "continuous_control"]
     problem_types = ["regression"]
+    args = parse_args(sys.argv[1:])
 
     for problem_type in problem_types:
 
@@ -115,7 +117,9 @@ if __name__ == '__main__':
         unpacked_configs = []
 
         for config_file in config_files:
-            unpacked_configs += process_dictionary(cgpax.get_config(config_file))
+            current_config = cgpax.get_config(config_file)
+            current_config.update(args)
+            unpacked_configs += process_dictionary(current_config)
 
         print(f"\n\nRunning {problem_type}...")
         print(f"Total configs found: {len(unpacked_configs)}")
