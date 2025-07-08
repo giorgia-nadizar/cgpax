@@ -6,7 +6,6 @@ from jax import vmap
 from cgpax.standard.encoding import genome_to_cgp_program, genome_to_lgp_program, _update_buffer_numeric, \
     _update_register_numeric
 from cgpax.utils import identity
-from sklearn.metrics import r2_score
 
 
 def _evaluate_regression_program(program: Callable, program_state_size: int, x_values: jnp.ndarray,
@@ -19,8 +18,11 @@ def _evaluate_regression_program(program: Callable, program_state_size: int, x_v
     predictions = vmap(_compute_prediction)(x_values)
     squared_errors = (predictions - y_values) ** 2
     mse = jnp.mean(squared_errors)
-    r2 = r2_score(y_values, predictions)
-    return {"error": mse, "r2": r2}
+    ss_res = jnp.sum((y_values - predictions) ** 2, axis=0)
+    ss_tot = jnp.sum((y_values - jnp.mean(y_values, axis=0)) ** 2, axis=0)
+
+    r2 = 1 - ss_res / ss_tot
+    return {"error": mse, "r2": jnp.mean(r2)}
 
 
 def evaluate_cgp_genome(genome: jnp.ndarray, config: Dict, x_values: jnp.ndarray, y_values: jnp.ndarray,
