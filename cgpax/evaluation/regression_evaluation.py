@@ -6,19 +6,21 @@ from jax import vmap
 from cgpax.standard.encoding import genome_to_cgp_program, genome_to_lgp_program, _update_buffer_numeric, \
     _update_register_numeric
 from cgpax.utils import identity
+from sklearn.metrics import r2_score
 
 
 def _evaluate_regression_program(program: Callable, program_state_size: int, x_values: jnp.ndarray,
-                                     y_values: jnp.ndarray) -> Dict:
+                                 y_values: jnp.ndarray) -> Dict:
     def _compute_prediction(x: jnp.ndarray) -> jnp.ndarray:
         program_state = jnp.zeros(program_state_size, dtype=x.dtype)
         _, prediction = program(x, program_state)
         return prediction
 
     predictions = vmap(_compute_prediction)(x_values)
-    errors = jnp.abs(predictions - y_values)
-    avg_error = jnp.mean(errors)
-    return {"error": avg_error, "accuracy": 1 - avg_error}
+    squared_errors = (predictions - y_values) ** 2
+    mse = jnp.mean(squared_errors)
+    r2 = r2_score(y_values, predictions)
+    return {"error": mse, "r2": r2}
 
 
 def evaluate_cgp_genome(genome: jnp.ndarray, config: Dict, x_values: jnp.ndarray, y_values: jnp.ndarray,
