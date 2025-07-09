@@ -8,8 +8,6 @@ from jax import random
 
 import cgpax
 from cgpax.evaluation.evaluation_utils import prepare_evaluation_functions
-from cgpax.gomea.fos import compute_fos
-from cgpax.gomea.gom import parallel_gom, parallel_forced_improvement
 from cgpax.run_utils import compute_masks, compute_genome_transformation_function, process_dictionary, \
     compile_parents_selection, compile_crossover, compile_mutation, compile_survival_selection, parse_args
 from cgpax.standard import individual
