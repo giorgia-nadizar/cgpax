@@ -89,6 +89,7 @@ def _prepare_evaluation_functions_boolean(config: Dict) -> Tuple[Callable, Union
 
 def _prepare_evaluation_functions_regression(config: Dict) -> Tuple[Callable, Union[Callable, None]]:
     x_values, y_values = load_dataset(config["problem"])
+    y_values = y_values.reshape(-1, y_values.shape[-1] if y_values.ndim > 1 else 1)
     train_size = config.get("train_size", 0.7)
 
     # split train and test
