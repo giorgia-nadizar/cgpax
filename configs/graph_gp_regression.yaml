@@ -35,5 +35,6 @@ solver: cgp
 #  incremental_steps: 1
 #  maximize: true
 n_generations: 5000
-problem: nguyen_9_12
+#problem: nguyen_9_12
+problem: [ nguyen_9,nguyen_10,nguyen_12 ]
 early_stop: false
