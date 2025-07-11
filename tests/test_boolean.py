@@ -2,7 +2,7 @@ from functools import partial
 
 import jax.numpy as jnp
 
-from cgpax.boolean_evaluation import evaluate_cgp_genome
+from cgpax.evaluation.boolean_evaluation import evaluate_cgp_genome
 from cgpax.functions import function_set_boolean
 from cgpax.utils import cgp_expression_from_genome
 
