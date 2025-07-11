@@ -3,7 +3,7 @@ import time
 from typing import Dict
 
 import jax.numpy as jnp
-from jax import default_backend
+from jax import default_backend, vmap
 from jax import random
 
 import cgpax
@@ -40,11 +40,17 @@ def run_ga(config: Dict) -> None:
 
     times = {}
     best_test_accuracy = None
+    offspring = None
+    survivals_fitnesses = None
     # evolutionary loop
     for _generation in range(config["n_generations"]):
         # evaluate population
         start_eval_time = time.time()
-        fitnesses = genomes_to_fitnesses(genomes)
+        if _generation ==0 or config.get("reassess", True):
+            fitnesses = genomes_to_fitnesses(genomes)
+        else:
+            new_fitnesses = genomes_to_fitnesses(offspring)
+            fitnesses = jnp.concatenate((survivals_fitnesses, new_fitnesses))
         eval_time = time.time() - start_eval_time
 
         if genome_to_test_accuracy is not None:
@@ -95,6 +101,17 @@ def run_ga(config: Dict) -> None:
         # select survivals
         rnd_key, survival_key = random.split(rnd_key, 2)
         survivals = parents if select_survivals is None else select_survivals(genomes, fitnesses, survival_key)
+
+        # extract fitness of survivals
+        comparisons = genomes[None, :, :] == survivals[:, None, :]
+        matches = jnp.all(comparisons, axis=2)
+        def _get_first_match_index(row_matches):
+            row_indices = jnp.arange(row_matches.shape[0])
+            masked_indices = jnp.where(row_matches, row_indices, row_matches.shape[0])  # Invalid index = M
+            first_idx = jnp.min(masked_indices)
+            return jnp.where(first_idx == row_matches.shape[0], -1, first_idx)
+        first_match_indices = vmap(_get_first_match_index)(matches)
+        survivals_fitnesses = fitnesses[first_match_indices]
 
         # update population
         assert len(genomes) == len(survivals) + len(offspring)
