@@ -14,6 +14,9 @@ from cgpax.standard import individual
 
 
 def run_ga(config: Dict) -> None:
+    if "n_evaluations" not in config:
+        config["n_evaluations"] = config["n_generations"] * config["n_individuals"]
+
     rnd_key = random.PRNGKey(config["seed"])
 
     # compose genome eval
@@ -43,13 +46,16 @@ def run_ga(config: Dict) -> None:
     offspring = None
     survivals_fitnesses = None
     # evolutionary loop
-    for _generation in range(config["n_generations"]):
+    n_evaluated = 0
+    while n_evaluated < config["n_evaluations"]:
         # evaluate population
         start_eval_time = time.time()
-        if _generation == 0 or config.get("reassess", True):
+        if n_evaluated == 0 or config.get("reassess", True):
             fitnesses = genomes_to_fitnesses(genomes)
+            n_evaluated += len(fitnesses)
         else:
             new_fitnesses = genomes_to_fitnesses(offspring)
+            n_evaluated += len(new_fitnesses)
             fitnesses = jnp.concatenate((survivals_fitnesses, new_fitnesses))
         eval_time = time.time() - start_eval_time
 
@@ -59,13 +65,13 @@ def run_ga(config: Dict) -> None:
             best_test_accuracy = genome_to_test_accuracy(best_individual)
 
         with open(f"../results/{cfg['run_name']}.csv", "a") as csv_file:
-            csv_file.write(f"{_generation * len(fitnesses)},{jnp.max(fitnesses)},"
+            csv_file.write(f"{n_evaluated},{jnp.max(fitnesses)},"
                            f"{best_test_accuracy if genome_to_test_accuracy is not None else ''}"
                            f"{',' if genome_to_test_accuracy is not None else ''}"
                            f"{eval_time:.2f}\n")
 
         print(
-            f"{_generation} \t"
+            f"{n_evaluated} \t"
             f"FITNESS: {jnp.max(fitnesses)} \t "
             f"E: {eval_time:.2f} \t"
         )
@@ -125,7 +131,7 @@ if __name__ == '__main__':
     print(f"Starting the run with {default_backend()} as backend...")
 
     # problem_types = ["boolean", "classification", "regression", "discrete_control", "continuous_control"]
-    problem_types = ["regression"]
+    problem_types = ["continuous_control"]
     args = parse_args(sys.argv[1:])
 
     for problem_type in problem_types:
