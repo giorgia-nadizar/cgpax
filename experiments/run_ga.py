@@ -46,7 +46,7 @@ def run_ga(config: Dict) -> None:
     for _generation in range(config["n_generations"]):
         # evaluate population
         start_eval_time = time.time()
-        if _generation ==0 or config.get("reassess", True):
+        if _generation == 0 or config.get("reassess", True):
             fitnesses = genomes_to_fitnesses(genomes)
         else:
             new_fitnesses = genomes_to_fitnesses(offspring)
@@ -105,11 +105,13 @@ def run_ga(config: Dict) -> None:
         # extract fitness of survivals
         comparisons = genomes[None, :, :] == survivals[:, None, :]
         matches = jnp.all(comparisons, axis=2)
+
         def _get_first_match_index(row_matches):
             row_indices = jnp.arange(row_matches.shape[0])
             masked_indices = jnp.where(row_matches, row_indices, row_matches.shape[0])  # Invalid index = M
             first_idx = jnp.min(masked_indices)
             return jnp.where(first_idx == row_matches.shape[0], -1, first_idx)
+
         first_match_indices = vmap(_get_first_match_index)(matches)
         survivals_fitnesses = fitnesses[first_match_indices]
 
