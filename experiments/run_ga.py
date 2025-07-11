@@ -51,10 +51,12 @@ def run_ga(config: Dict) -> None:
         # evaluate population
         start_eval_time = time.time()
         if n_evaluated == 0 or config.get("reassess", True):
-            fitnesses = genomes_to_fitnesses(genomes)
+            rnd_key, *eval_keys = random.split(rnd_key, len(genomes) + 1)
+            fitnesses = genomes_to_fitnesses(genomes, jnp.array(eval_keys))
             n_evaluated += len(fitnesses)
         else:
-            new_fitnesses = genomes_to_fitnesses(offspring)
+            rnd_key, *eval_keys = random.split(rnd_key, len(offspring) + 1)
+            new_fitnesses = genomes_to_fitnesses(offspring, jnp.array(eval_keys))
             n_evaluated += len(new_fitnesses)
             fitnesses = jnp.concatenate((survivals_fitnesses, new_fitnesses))
         eval_time = time.time() - start_eval_time
