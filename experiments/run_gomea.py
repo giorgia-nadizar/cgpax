@@ -18,6 +18,8 @@ def run_gomea(config: Dict) -> None:
     if "n_evaluations" not in config:
         config["n_evaluations"] = config["n_generations"] * config["n_individuals"]
     forced_improvement = config.get("forced_improvement", False)
+    if forced_improvement:
+        config["run_name"] += "_fi"
     forced_improvement_generations_threshold = 1 + jnp.log10(config["n_individuals"])
 
     rnd_key = random.PRNGKey(config["seed"])
