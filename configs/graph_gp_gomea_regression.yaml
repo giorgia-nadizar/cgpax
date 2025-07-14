@@ -34,3 +34,4 @@ n_generations: 5000
 #problem: nguyen_9_12
 problem: [ nguyen_9_dense,nguyen_10_dense,nguyen_12_dense,nguyen_9_12_dense ]
 early_stop: false
+forced_improvement: True
