@@ -133,7 +133,8 @@ def run_gomea(config: Dict) -> None:
                     fos,
                     genomes_to_fitnesses,
                     forced_impro_key,
-                    True
+                    True,
+                    test_eval_fn=genome_to_test_accuracy
                 )
                 genomes = offspring_genomes
                 genomes = genomes.at[unchanged_genomes_ids].set(forced_improved_genomes)
