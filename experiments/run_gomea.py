@@ -61,6 +61,8 @@ def run_gomea(config: Dict) -> None:
         # fos computation
         fos_start_time = time.process_time()
         rnd_key, fos_key = random.split(rnd_key, 2)
+        # ensure genomes are always integers
+        genomes = genomes.astype(jnp.int32)
         fos, bias_matrix = compute_fos(genomes, rnd_key, config, bias_matrix, ignore_full_list=True)
         times["fos_time"] = time.process_time() - fos_start_time
         print("FOS DONE")
@@ -73,6 +75,8 @@ def run_gomea(config: Dict) -> None:
                                                                        intermediate_prints=True,
                                                                        test_eval_fn=genome_to_test_accuracy
                                                                        )
+        # ensure genomes are always integers
+        offspring_genomes = offspring_genomes.astype(jnp.int32)
         times["gom_time"] = time.process_time() - gom_start_time
         avg_gom_time = times["gom_time"] / len(fos)
 
