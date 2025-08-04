@@ -41,9 +41,11 @@ def parallel_gom(
 
         genotypes = jnp.where((offspring_fitnesses >= fitnesses)[:, None], offspring_genotypes, genotypes)
         fitnesses = jnp.where(offspring_fitnesses >= fitnesses, offspring_fitnesses, fitnesses)
+        unique_ratio = len(jnp.unique(genotypes.astype(int), axis=0)) / len(genotypes)
         current_iteration_dict = {
             "evaluation": f_idx * len(genotypes),
             "max_fitness": jnp.max(fitnesses),
+            "unique_ratio": unique_ratio
         }
 
         if intermediate_prints:
@@ -111,14 +113,12 @@ def parallel_forced_improvement(
 
         genotypes = jnp.where((offspring_fitnesses > fitnesses)[:, None], offspring_genotypes, genotypes)
         fitnesses = jnp.where(offspring_fitnesses > fitnesses, offspring_fitnesses, fitnesses)
-
-        # forced improvement has finished for all
-        if jnp.all(final_fitnesses > -jnp.inf):
-            break
+        unique_ratio = len(jnp.unique(genotypes.astype(int), axis=0)) / len(genotypes)
 
         current_iteration_dict = {
             "evaluation": evaluation,
             "max_fitness": jnp.max(final_fitnesses),
+            "unique_ratio": unique_ratio
         }
 
         if intermediate_prints:
@@ -132,6 +132,10 @@ def parallel_forced_improvement(
             current_iteration_dict["test_accuracy"] = best_test_accuracy
 
         history_dicts.append(current_iteration_dict)
+
+        # forced improvement has finished for all
+        if jnp.all(final_fitnesses > -jnp.inf):
+            break
 
     # replace all individuals which did not improve with the elite individual
 
