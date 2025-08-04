@@ -1,5 +1,6 @@
 import sys
 import time
+from pathlib import Path
 from typing import Dict
 
 import jax.numpy as jnp
@@ -163,6 +164,10 @@ def run_gomea(config: Dict) -> None:
                         f"{',' if genome_to_test_accuracy is not None else ''}"
                         f"{avg_gom_time:.2f}\n"
                     )
+
+    Path(f"../results/{config['run_name']}").mkdir(parents=True, exist_ok=True)
+    jnp.save(f"../results/{config['run_name']}/genomes.npy", genomes)
+    jnp.save(f"../results/{config['run_name']}/fitnesses.npy", fitnesses)
 
 
 if __name__ == '__main__':
