@@ -51,8 +51,8 @@ def run_gomea(config: Dict) -> None:
     with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
         csv_file.write(f"evaluation,fitness,"
                        f"{'test_accuracy,' if genome_to_test_accuracy is not None else ''}"
-                       f"time\n")
-        csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
+                       f"uniqueness,time\n")
+        # csv_file.write(f"0,{jnp.max(fitnesses)},{eval_time:.2f}\n")
 
     times = {}
     # evolutionary loop
@@ -71,7 +71,7 @@ def run_gomea(config: Dict) -> None:
 
         rnd_key, gom_key = random.split(rnd_key, 2)
         gom_start_time = time.process_time()
-        offspring_genomes, fitnesses, fitnesses_history = parallel_gom(genomes, fitnesses, fos,
+        offspring_genomes, fitnesses, history = parallel_gom(genomes, fitnesses, fos,
                                                                        genomes_to_fitnesses,
                                                                        gom_key,
                                                                        intermediate_prints=True,
@@ -83,12 +83,13 @@ def run_gomea(config: Dict) -> None:
         avg_gom_time = times["gom_time"] / len(fos)
 
         with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
-            for details_dict in fitnesses_history:
+            for details_dict in history:
                 csv_file.write(
                     f"{_fitness_evaluation + details_dict['evaluation']},"
                     f"{details_dict['max_fitness']},"
                     f"{details_dict['test_accuracy'] if genome_to_test_accuracy is not None else ''}"
                     f"{',' if genome_to_test_accuracy is not None else ''}"
+                    f"{details_dict['unique_ratio']},"
                     f"{avg_gom_time:.2f}\n"
                 )
 
@@ -163,6 +164,7 @@ def run_gomea(config: Dict) -> None:
                         f"{_fitness_evaluation},{elite_fitness},"
                         f"{elite_test_accuracy if genome_to_test_accuracy is not None else ''}"
                         f"{',' if genome_to_test_accuracy is not None else ''}"
+                        f"{len(jnp.unique(genomes)) / len(genomes)},"
                         f"{avg_gom_time:.2f}\n"
                     )
 
