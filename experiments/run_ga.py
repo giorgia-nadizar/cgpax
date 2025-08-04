@@ -39,7 +39,7 @@ def run_ga(config: Dict) -> None:
     with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
         csv_file.write(f"evaluation,fitness,"
                        f"{'test_accuracy,' if genome_to_test_accuracy is not None else ''}"
-                       f"time\n")
+                       f"uniqueness,time\n")
 
     times = {}
     best_test_accuracy = None
@@ -66,11 +66,13 @@ def run_ga(config: Dict) -> None:
             best_individual = genomes[jnp.argmax(fitnesses)]
             best_test_accuracy = genome_to_test_accuracy(best_individual)
 
+        uniqueness = len(jnp.unique(genomes.astype(int)) / len(genomes))
+
         with open(f"../results/{cfg['run_name']}.csv", "a") as csv_file:
             csv_file.write(f"{n_evaluated},{jnp.max(fitnesses)},"
                            f"{best_test_accuracy if genome_to_test_accuracy is not None else ''}"
                            f"{',' if genome_to_test_accuracy is not None else ''}"
-                           f"{eval_time:.2f}\n")
+                           f"{uniqueness},{eval_time:.2f}\n")
 
         print(
             f"{n_evaluated} \t"
