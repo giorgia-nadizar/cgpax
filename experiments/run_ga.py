@@ -66,7 +66,7 @@ def run_ga(config: Dict) -> None:
             best_individual = genomes[jnp.argmax(fitnesses)]
             best_test_accuracy = genome_to_test_accuracy(best_individual)
 
-        uniqueness = len(jnp.unique(genomes.astype(int)) / len(genomes))
+        uniqueness = len(jnp.unique(genomes.astype(int), axis=0)) / len(genomes)
 
         with open(f"../results/{cfg['run_name']}.csv", "a") as csv_file:
             csv_file.write(f"{n_evaluated},{jnp.max(fitnesses)},"

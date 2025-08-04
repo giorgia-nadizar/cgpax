@@ -158,13 +158,14 @@ def run_gomea(config: Dict) -> None:
                         if details_dict["max_fitness"] == elite_fitness:
                             elite_test_accuracy = details_dict["test_accuracy"]
 
+                unique_ratio = len(jnp.unique(genomes.astype(int), axis=0)) / len(genomes)
                 # if forced improvement gave better results, keep track of them
                 with open(f"../results/{config['run_name']}.csv", "a") as csv_file:
                     csv_file.write(
                         f"{_fitness_evaluation},{elite_fitness},"
                         f"{elite_test_accuracy if genome_to_test_accuracy is not None else ''}"
                         f"{',' if genome_to_test_accuracy is not None else ''}"
-                        f"{len(jnp.unique(genomes)) / len(genomes)},"
+                        f"{unique_ratio},"
                         f"{avg_gom_time:.2f}\n"
                     )
 
