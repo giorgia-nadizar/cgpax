@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Dict
 
 import jax.numpy as jnp
+import yaml
 from jax import default_backend
 from jax import random
 
@@ -168,6 +169,8 @@ def run_gomea(config: Dict) -> None:
     Path(f"../results/{config['run_name']}").mkdir(parents=True, exist_ok=True)
     jnp.save(f"../results/{config['run_name']}/genomes.npy", genomes)
     jnp.save(f"../results/{config['run_name']}/fitnesses.npy", fitnesses)
+    with open(f"../results/{config['run_name']}/config.yml", "w") as yaml_file:
+        yaml.dump(config, yaml_file, default_flow_style=False)
 
 
 if __name__ == '__main__':
