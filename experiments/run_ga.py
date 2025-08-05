@@ -50,7 +50,7 @@ def run_ga(config: Dict) -> None:
     while n_evaluated < config["n_evaluations"]:
         # evaluate population
         start_eval_time = time.time()
-        if n_evaluated == 0 or config.get("reassess", True):
+        if n_evaluated == 0 or config.get("reassess", False):
             rnd_key, *eval_keys = random.split(rnd_key, len(genomes) + 1)
             fitnesses = genomes_to_fitnesses(genomes, jnp.array(eval_keys))
             n_evaluated += len(fitnesses)
