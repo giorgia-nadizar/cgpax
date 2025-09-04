@@ -24,6 +24,8 @@ def run_gomea(config: Dict) -> None:
         config["run_name"] += "_fi"
     forced_improvement_generations_threshold = 1 + jnp.log10(config["n_individuals"])
     diversity_preservation = config.get("diversity_preservation", True)
+    if diversity_preservation:
+        config["run_name"] += "_diversity"
 
     rnd_key = random.PRNGKey(config["seed"])
 
