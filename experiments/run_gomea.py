@@ -23,6 +23,7 @@ def run_gomea(config: Dict) -> None:
     if forced_improvement:
         config["run_name"] += "_fi"
     forced_improvement_generations_threshold = 1 + jnp.log10(config["n_individuals"])
+    diversity_preservation = config.get("diversity_preservation", True)
 
     rnd_key = random.PRNGKey(config["seed"])
 
@@ -72,11 +73,12 @@ def run_gomea(config: Dict) -> None:
         rnd_key, gom_key = random.split(rnd_key, 2)
         gom_start_time = time.process_time()
         offspring_genomes, fitnesses, history = parallel_gom(genomes, fitnesses, fos,
-                                                                       genomes_to_fitnesses,
-                                                                       gom_key,
-                                                                       intermediate_prints=True,
-                                                                       test_eval_fn=genome_to_test_accuracy
-                                                                       )
+                                                             genomes_to_fitnesses,
+                                                             gom_key,
+                                                             intermediate_prints=True,
+                                                             test_eval_fn=genome_to_test_accuracy,
+                                                             diversity_preservation=diversity_preservation,
+                                                             )
         # ensure genomes are always integers
         offspring_genomes = offspring_genomes.astype(jnp.int32)
         times["gom_time"] = time.process_time() - gom_start_time
@@ -123,7 +125,8 @@ def run_gomea(config: Dict) -> None:
                     genomes_to_fitnesses,
                     forced_impro_key,
                     True,
-                    test_eval_fn=genome_to_test_accuracy
+                    test_eval_fn=genome_to_test_accuracy,
+                    diversity_preservation=diversity_preservation
                 )
             else:
                 unchanged_genomes_ids = jnp.where(jnp.all(genomes == offspring_genomes, axis=1))[0]
@@ -141,7 +144,10 @@ def run_gomea(config: Dict) -> None:
                     genomes_to_fitnesses,
                     forced_impro_key,
                     True,
-                    test_eval_fn=genome_to_test_accuracy
+                    test_eval_fn=genome_to_test_accuracy,
+                    diversity_preservation=diversity_preservation,
+                    reference_population = offspring_genomes,
+                    forced_improvement_ids = unchanged_genomes_ids
                 )
                 genomes = offspring_genomes
                 genomes = genomes.at[unchanged_genomes_ids].set(forced_improved_genomes)
@@ -181,7 +187,7 @@ if __name__ == '__main__':
     print(f"Starting the run with {default_backend()} as backend...")
 
     # problem_types = ["boolean", "classification", "regression", "discrete_control", "continuous_control"]
-    problem_types = ["regression"]
+    problem_types = ["continuous_control"]
     args = parse_args(sys.argv[1:])
 
     for problem_type in problem_types:
