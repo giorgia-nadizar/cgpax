@@ -18,6 +18,8 @@ from cgpax.standard import individual
 def run_ga(config: Dict) -> None:
     if "n_evaluations" not in config:
         config["n_evaluations"] = config["n_generations"] * config["n_individuals"]
+    if config["n_individuals"] > 200:
+        config["run_name"] += "_large_pop"
 
     rnd_key = random.PRNGKey(config["seed"])
 
