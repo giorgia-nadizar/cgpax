@@ -26,6 +26,8 @@ def run_gomea(config: Dict) -> None:
     diversity_preservation = config.get("diversity_preservation", True)
     if diversity_preservation:
         config["run_name"] += "_diversity"
+    if config["n_individuals"] > 200:
+        config["run_name"] += "_large_pop"
 
     rnd_key = random.PRNGKey(config["seed"])
 
