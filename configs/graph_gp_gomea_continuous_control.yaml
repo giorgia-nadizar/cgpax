@@ -2,7 +2,7 @@ backend: positional
 constrain_outputs: true
 mutation: standard
 n_evals_per_individual: 5
-n_individuals: 100
+n_individuals: 1000
 n_parallel_runs: 1
 nan_replacement: -100000.0
 distance: false
@@ -14,7 +14,7 @@ saving_interval: 100
 seed: [ 0,1,2,3,4 ]
 forced_improvement: True
 #store_fitness_details_list: [ healthy, ctrl, forward ]
-
+diversity_preservation: false
 n_nodes: 50
 p_mut_inputs: 0.1
 p_mut_outputs: 0.3
@@ -38,37 +38,37 @@ nested0:
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 2000
+    n_generations: 200
   - problem:
       environment: reacher
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 2000
+    n_generations: 200
   - problem:
       environment: swimmer
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 2000
+    n_generations: 200
   - problem:
       environment: hopper
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 3000
+    n_generations: 300
   - problem:
       environment: walker2d
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 3000
+    n_generations: 300
   - problem:
       environment: halfcheetah
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 1000
+    n_generations: 100
 #  - problem:
 #      environment: miniant
 #      episode_length: 1000
