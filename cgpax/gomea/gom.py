@@ -1,15 +1,10 @@
+import random as rnd
 from copy import deepcopy
 from functools import partial
+from typing import List, Tuple, Callable, Dict
 
 import jax.numpy as jnp
-from typing import List, Tuple, Callable, Union, Dict
-
-from brax.experimental.composer.envs.sa_descs import new_desc_name
 from jax import random, jit, lax
-import random as rnd
-
-from nbformat.current import current_nbformat_minor, current_nbformat_module
-from zstandard.backend_cffi import new_nonzero
 
 
 @jit
@@ -152,20 +147,26 @@ def parallel_forced_improvement(
             genotypes = jnp.where(better_offspring[:, None], offspring_genotypes, genotypes)
             fitnesses = jnp.where(better_offspring, offspring_fitnesses, fitnesses)
         else:
-            diversity_preservation_mask = jnp.zeros_like(forced_improvement_ids, dtype=int)
             tmp_prev_genomes = reference_population.at[forced_improvement_ids].set(final_genotypes)
-            previous_unique_ratio = len(jnp.unique(tmp_prev_genomes.astype(int), axis=0)) / len(tmp_prev_genomes)
-            for g_idx in range(len(diversity_preservation_mask)):
-                if not individuals_to_replace[g_idx]:
-                    continue
-                tmp_diversity_mask = diversity_preservation_mask.at[g_idx].set(1)
-                tmp_replacement_mask = jnp.logical_and(individuals_to_replace, tmp_diversity_mask)
-                tmp_final_genotypes = jnp.where(tmp_replacement_mask[:, None], offspring_genotypes, final_genotypes)
-                tmp_total_pop = reference_population.at[forced_improvement_ids].set(tmp_final_genotypes)
-                new_unique_ratio = len(jnp.unique(tmp_total_pop.astype(int), axis=0)) / len(tmp_total_pop)
-                if new_unique_ratio >= previous_unique_ratio:
-                    diversity_preservation_mask = tmp_diversity_mask
-                    final_genotypes = tmp_final_genotypes
+
+            def _diversity_insertion(g_idx: int, carry: Tuple[jnp.ndarray, int]):
+                diversity_mask, previous_n_uniques = carry
+                tmp_div_mask = diversity_mask.at[g_idx].set(1)
+                tmp_filter_mask = jnp.logical_and(individuals_to_replace, tmp_div_mask)
+                tmp_final_genotypes = jnp.where(tmp_filter_mask[:, None], offspring_genotypes, final_genotypes)
+                tmp_pop = reference_population.at[forced_improvement_ids].set(tmp_final_genotypes)
+                new_n_uniques = jnp.unique(tmp_pop.astype(int), axis=0, size=reference_population.shape[0]).shape[0]
+                keep_this_individual = new_n_uniques >= previous_n_uniques
+                diversity_mask = diversity_mask.at[g_idx].set(keep_this_individual)
+                updated_n_uniques = (keep_this_individual * new_n_uniques +
+                                     (1 - keep_this_individual) * previous_n_uniques)
+                return diversity_mask, updated_n_uniques
+
+            diversity_preservation_mask, _ = lax.fori_loop(0, len(fitnesses), _diversity_insertion,
+                                                           (jnp.zeros_like(better_offspring, dtype=int),
+                                                            len(jnp.unique(tmp_prev_genomes.astype(int), axis=0))))
+            final_genotypes = jnp.where(jnp.logical_and(individuals_to_replace, diversity_preservation_mask)[:, None],
+                                        offspring_genotypes, final_genotypes)
             final_fitnesses = jnp.where(jnp.logical_and(individuals_to_replace, diversity_preservation_mask),
                                         offspring_fitnesses, final_fitnesses)
             better_and_diverse = jnp.logical_and(diversity_preservation_mask, better_offspring)
@@ -173,7 +174,6 @@ def parallel_forced_improvement(
             fitnesses = jnp.where(better_and_diverse, offspring_fitnesses, fitnesses)
 
         unique_ratio = len(jnp.unique(genotypes.astype(int), axis=0)) / len(genotypes)
-
         current_iteration_dict = {
             "evaluation": evaluation,
             "max_fitness": jnp.max(final_fitnesses),
