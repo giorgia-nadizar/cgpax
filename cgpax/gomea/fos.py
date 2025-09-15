@@ -15,7 +15,13 @@ def compute_fos(genomes: jnp.ndarray,
     fos_mode = config.get("fos_mode", "LT")
     if fos_mode == "LT":
         nmi_matrix, bias_matrix = _compute_normalized_mutual_information_matrix(genomes, config,
-                                                                                bias_matrix)  # (genotype size, genotype size)
+                                                                                bias_matrix,
+                                                                                True)  # (genotype size, genotype size)
+        fos = _compute_lt_fos(nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
+    elif fos_mode == "LT1":
+        nmi_matrix, bias_matrix = _compute_normalized_mutual_information_matrix(genomes, config,
+                                                                                bias_matrix,
+                                                                                False)  # (genotype size, genotype size)
         fos = _compute_lt_fos(nmi_matrix, rnd_key, ignore_full_list)  # 2 * genotype size - 2
     elif fos_mode == "U":
         fos = _compute_u_fos(genomes)
@@ -195,6 +201,7 @@ def _compute_normalized_mutual_information_matrix(
         genomes: jnp.ndarray,
         config: Dict,
         bias_matrix: jnp.ndarray = None,
+        shift_functions: bool = True,
 ) -> Tuple[jnp.ndarray, jnp.ndarray]:
     # the preprocessing is needed because f genes represent different things from connection genes -> shift
     if config["solver"] == "cgp":
@@ -204,14 +211,14 @@ def _compute_normalized_mutual_information_matrix(
         n_functions = config["n_functions"]
         n_symbols = n_connection_symbols + n_functions
         xy_genes, f_genes, out_genes = jnp.split(genomes, [2 * n_nodes, 3 * n_nodes], axis=1)
-        f_genes_shifted = f_genes + n_connection_symbols
+        f_genes_shifted = f_genes + n_connection_symbols if shift_functions else f_genes
         shifted_genomes = jnp.concatenate([xy_genes, f_genes_shifted, out_genes], axis=1)
 
     elif config["solver"] == "lgp":
         lhs_genes, x_genes, y_genes, f_genes = jnp.split(genomes, 4, axis=1)
         n_registers = config["n_registers"]
         n_functions = config["n_functions"]
-        f_genes_shifted = f_genes + n_registers
+        f_genes_shifted = f_genes + n_registers if shift_functions else f_genes
         n_symbols = n_registers + n_functions
         shifted_genomes = jnp.concatenate([lhs_genes, x_genes, y_genes, f_genes_shifted], axis=1)
 
