@@ -22,7 +22,7 @@ survival: truncation
 #p_mut_inputs: 0.1
 #p_mut_outputs: 0.3
 #solver: cgp
-n_extra_registers: 5
+n_extra_registers: 10
 n_rows: 35
 p_mut_lhs: 0.3
 p_mut_rhs: 0.1
