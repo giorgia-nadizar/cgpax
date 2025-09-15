@@ -31,47 +31,47 @@ solver: cgp
 #  episode_length: 1000
 #  incremental_steps: 1
 #  maximize: true
-#n_generations: 1000
+#n_evaluations: 1000
 nested0:
   - problem:
       environment: inverted_double_pendulum
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 200
+    n_evaluations: 200_000
   - problem:
       environment: reacher
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 200
+    n_evaluations: 200_000
   - problem:
       environment: swimmer
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 200
+    n_evaluations: 200_000
   - problem:
       environment: hopper
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 300
+    n_evaluations: 300_000
   - problem:
       environment: walker2d
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 300
+    n_evaluations: 300_000
   - problem:
       environment: halfcheetah
       episode_length: 1000
       incremental_steps: 1
       maximize: true
-    n_generations: 100
+    n_evaluations: 100_000
 #  - problem:
 #      environment: miniant
 #      episode_length: 1000
 #      incremental_steps: 1
 #      maximize: true
-#    n_generations: 2500
+#    n_evaluations: 2500
