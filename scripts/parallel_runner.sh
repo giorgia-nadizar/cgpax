@@ -6,7 +6,7 @@ SESSION="gpax_runs"
 byobu new-session -d -s $SESSION -n base
 byobu send-keys -t $SESSION:base "echo 'GPAX run session started'" C-m
 
-FOSS=("U" "RT" "LT" "N1" "N2")
+FOSS=("U" "RT" "LT" "LT1")
 
 # Loop over seeds
 for SEED in {0..4}; do
@@ -21,7 +21,8 @@ for SEED in {0..4}; do
     byobu send-keys -t $SESSION:"$WIN_NAME" "conda activate gpax" C-m
     byobu send-keys -t $SESSION:"$WIN_NAME" "export PYTHONPATH=\$PWD" C-m
     byobu send-keys -t $SESSION:"$WIN_NAME" "cd experiments" C-m
-    byobu send-keys -t $SESSION:"$WIN_NAME" "python run_gomea.py --seed $SEED --fos_mode $FOS" C-m
+    byobu send-keys -t $SESSION:"$WIN_NAME" "python run_gomea.py --seed $SEED --fos_mode $FOS --n_individuals 100" C-m
+    byobu send-keys -t $SESSION:"$WIN_NAME" "python run_gomea.py --seed $SEED --fos_mode $FOS --n_individuals 1000" C-m
   done
 done
 
@@ -36,7 +37,8 @@ for SEED in {0..4}; do
   byobu send-keys -t $SESSION:"$WIN_NAME" "conda activate gpax" C-m
   byobu send-keys -t $SESSION:"$WIN_NAME" "export PYTHONPATH=\$PWD" C-m
   byobu send-keys -t $SESSION:"$WIN_NAME" "cd experiments" C-m
-  byobu send-keys -t $SESSION:"$WIN_NAME" "python run_ga.py --seed $SEED" C-m
+  byobu send-keys -t $SESSION:"$WIN_NAME" "python run_ga.py --seed $SEED --n_individuals 100" C-m
+  byobu send-keys -t $SESSION:"$WIN_NAME" "python run_ga.py --seed $SEED --n_individuals 1000" C-m
 done
 
 # Attach to the session

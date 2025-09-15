@@ -14,24 +14,25 @@ train_size: 0.8
 #store_fitness_details_list: [ healthy, ctrl, forward ]
 fos_mode: [ U,RT,LT,N1,N2 ]
 #nested0:
-n_nodes: 50
-p_mut_inputs: 0.1
-p_mut_outputs: 0.3
-solver: cgp
+#n_nodes: 50
+#p_mut_inputs: 0.1
+#p_mut_outputs: 0.3
+#solver: cgp
 #  - crossover: true
-#    n_extra_registers: 5
-#    n_rows: 15
-#    p_mut_lhs: 0.3
-#    p_mut_rhs: 0.1
-#    solver: lgp
+n_extra_registers: 5
+n_rows: 35
+p_mut_lhs: 0.3
+p_mut_rhs: 0.1
+solver: lgp
 
 #problem:
 #  environment: inverted_double_pendulum
 #  episode_length: 1000
 #  incremental_steps: 1
 #  maximize: true
-n_generations: 5000
+n_evaluations: 500_000
 #problem: nguyen_9_12
 problem: [ nguyen_9_dense,nguyen_10_dense,nguyen_12_dense,nguyen_9_12_dense ]
 early_stop: false
 forced_improvement: True
+diversity_preservation: false
