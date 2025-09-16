@@ -21,15 +21,15 @@ seed: [0,1,2,3,4]
 store_fitness_details_list: [ healthy, ctrl, forward ]
 #nested0:
 #  - crossover: true
-#    n_extra_registers: 5
-#    n_rows: 15
-#    p_mut_lhs: 0.3
-#    p_mut_rhs: 0.1
-#    solver: lgp
-n_nodes: 50
-p_mut_inputs: 0.1
-p_mut_outputs: 0.3
-solver: cgp
+n_extra_registers: 10
+n_rows: 35
+p_mut_lhs: 0.3
+p_mut_rhs: 0.1
+solver: lgp
+#n_nodes: 50
+#p_mut_inputs: 0.1
+#p_mut_outputs: 0.3
+#solver: cgp
 nested0:
 #  - problem:
 #      environment: inverted_pendulum
