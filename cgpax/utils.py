@@ -38,7 +38,16 @@ def _lgp_split_genome(genome: jnp.ndarray, config: Dict
     return lhs_genes, x_genes, y_genes, f_genes
 
 
-def compute_active_size(genome: jnp.ndarray, config: Dict) -> Tuple[int, int]:
+def compute_active_genome(genome: jnp.ndarray, config: Dict) -> jnp.ndarray:
+    active = _compute_active_computation(genome, config)
+    if config["solver"] == "cgp":
+        cgp_active = active[config["n_in"]:]
+        return jnp.concatenate((cgp_active, cgp_active, cgp_active, jnp.ones(config["n_out"], )))
+    else:
+        return jnp.concatenate((active, active, active, active))
+
+
+def _compute_active_computation(genome: jnp.ndarray, config: Dict) -> jnp.ndarray:
     if config["solver"] == "cgp":
         x_genes, y_genes, f_genes, out_genes = _cgp_split_genome(genome, config)
         active = compute_active_graph(x_genes.astype(int), y_genes.astype(int), f_genes.astype(int),
@@ -48,6 +57,11 @@ def compute_active_size(genome: jnp.ndarray, config: Dict) -> Tuple[int, int]:
         lhs_genes += config["n_in"]
         active = compute_coding_lines(lhs_genes.astype(int), x_genes.astype(int), y_genes.astype(int),
                                       f_genes.astype(int), config)
+    return active
+
+
+def compute_active_size(genome: jnp.ndarray, config: Dict) -> Tuple[int, int]:
+    active = _compute_active_computation(genome, config)
     return int(jnp.sum(active)), len(active)
 
 
