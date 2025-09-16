@@ -1,29 +1,31 @@
 from functools import partial
 from pathlib import Path
 import jax.numpy as jnp
-
+import numpy as np
 import yaml
-from jax import vmap, random
+from jax import random
 
 from cgpax.gomea.fos import _compute_normalized_mutual_information_matrix
 from cgpax.run_utils import compute_genome_transformation_function, compute_masks
 from cgpax.standard import individual
 from cgpax.utils import compute_active_genome
 
+from scipy.stats import entropy
 
-def column_unique_counts_vmap(matrix: jnp.ndarray):
-    def count_unique(col):
-        return jnp.unique(col, size=matrix.shape[0]).shape[0]
 
-    return vmap(count_unique)(matrix.T)
+def column_entropy(col):
+    values, counts = np.unique(col, return_counts=True)
+    probabilities = counts / counts.sum()
+    return entropy(probabilities, base=2)
 
 
 if __name__ == '__main__':
     seed = 0
-    environment = "inverted_double_pendulum"
+    environment = "nguyen_9_12_dense"
     pop_type = "_large_pop"
+    solver = "lgp"
 
-    base_path = f"../results/gomea_cgp_{environment}_LT_{seed}_fi{pop_type}"
+    base_path = f"../results/gomea_{solver}_{environment}_LT_{seed}_fi{pop_type}"
     config = yaml.safe_load(Path(f"{base_path}/config.yml").read_text())
     genomes = jnp.load(Path(f"{base_path}/genomes.npy"))
 
@@ -35,17 +37,17 @@ if __name__ == '__main__':
     print("genomes activity")
 
     # compute unique genes
-    unique_counts = column_unique_counts_vmap(genomes)
-    jnp.save(Path(f"{base_path}/unique_genes.npy"), unique_counts)
+    entropies = jnp.asarray([column_entropy(genomes[:, col]) for col in range(genomes.shape[1])])
+    jnp.save(Path(f"{base_path}/unique_genes.npy"), entropies)
     print("genomes uniqueness")
 
     # compute nmi matrix
-    # genome_mask, mutation_mask = compute_masks(config)
-    # genome_transformation_function = compute_genome_transformation_function(config)
-    # rnd_key = random.PRNGKey(0)
-    # init_genomes = individual.generate_population(pop_size=config["n_individuals"],
-    #                                               genome_mask=genome_mask, rnd_key=rnd_key,
-    #                                               genome_transformation_function=genome_transformation_function)
+    genome_mask, mutation_mask = compute_masks(config)
+    genome_transformation_function = compute_genome_transformation_function(config)
+    rnd_key = random.PRNGKey(0)
+    init_genomes = individual.generate_population(pop_size=config["n_individuals"],
+                                                  genome_mask=genome_mask, rnd_key=rnd_key,
+                                                  genome_transformation_function=genome_transformation_function)
     # _, bias_matrix = _compute_normalized_mutual_information_matrix(init_genomes, config, None)
     bias_matrix = jnp.ones((len(genomes[0]), len(genomes[0])))
     nmi_matrix, _ = _compute_normalized_mutual_information_matrix(genomes, config, bias_matrix)
