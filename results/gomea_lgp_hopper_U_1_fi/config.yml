@@ -1,0 +1,37 @@
+backend: positional
+constrain_outputs: true
+distance: false
+diversity_preservation: false
+forced_improvement: true
+fos_mode: U
+genome_size: 140
+mutation: standard
+n_constants: 2
+n_evals_per_individual: 5
+n_evaluations: 300000
+n_extra_registers: 10
+n_functions: 12
+n_in: 13
+n_in_env: 11
+n_individuals: 100
+n_out: 3
+n_parallel_runs: 1
+n_registers: 26
+n_rows: 35
+nan_replacement: -100000.0
+p_mut_functions: 0.1
+p_mut_lhs: 0.3
+p_mut_rhs: 0.1
+problem:
+  environment: hopper
+  episode_length: 1000
+  incremental_steps: 1
+  maximize: true
+problem_type: continuous_control
+recursive: false
+run_name: gomea_lgp_hopper_U_1_fi
+saving_interval: 100
+seed: 1
+solver: lgp
+unhealthy_termination: true
+use_input_constants: true
