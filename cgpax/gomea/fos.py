@@ -11,8 +11,9 @@ def compute_fos(genomes: jnp.ndarray,
                 rnd_key: random.PRNGKey,
                 config: Dict,
                 bias_matrix: jnp.ndarray = None,
-                ignore_full_list: bool = True) -> Tuple[List, Union[jnp.ndarray, None]]:
+                ignore_full_list: bool = True) -> Tuple[List, Union[jnp.ndarray, None], Union[jnp.ndarray, None]]:
     fos_mode = config.get("fos_mode", "LT")
+    nmi_matrix = None
     if fos_mode == "LT":
         nmi_matrix, bias_matrix = _compute_normalized_mutual_information_matrix(genomes, config,
                                                                                 bias_matrix,
@@ -35,7 +36,7 @@ def compute_fos(genomes: jnp.ndarray,
         fos = _compute_cgp_n2_fos(config)
     else:
         raise NotImplementedError
-    return fos, bias_matrix
+    return fos, nmi_matrix, bias_matrix
 
 
 def _compute_u_fos(genomes: jnp.ndarray, ) -> List:
