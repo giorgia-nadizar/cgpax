@@ -70,7 +70,7 @@ def run_gomea(config: Dict) -> None:
         rnd_key, fos_key = random.split(rnd_key, 2)
         # ensure genomes are always integers
         genomes = genomes.astype(jnp.int32)
-        fos, bias_matrix = compute_fos(genomes, rnd_key, config, bias_matrix, ignore_full_list=True)
+        fos, nmi_matrix, bias_matrix = compute_fos(genomes, rnd_key, config, bias_matrix, ignore_full_list=True)
         times["fos_time"] = time.process_time() - fos_start_time
         print("FOS DONE")
 
@@ -182,6 +182,8 @@ def run_gomea(config: Dict) -> None:
     Path(f"../results/{config['run_name']}").mkdir(parents=True, exist_ok=True)
     jnp.save(f"../results/{config['run_name']}/genomes.npy", genomes)
     jnp.save(f"../results/{config['run_name']}/fitnesses.npy", fitnesses)
+    if nmi_matrix is not None:
+        jnp.save(f"../results/{config['run_name']}/nmi_matrix.npy", nmi_matrix)
     with open(f"../results/{config['run_name']}/config.yml", "w") as yaml_file:
         yaml.dump(config, yaml_file, default_flow_style=False)
 
