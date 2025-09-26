@@ -19,15 +19,8 @@ from cgpax.standard import individual
 def run_gomea(config: Dict) -> None:
     if "n_evaluations" not in config:
         config["n_evaluations"] = config["n_generations"] * config["n_individuals"]
-    forced_improvement = config.get("forced_improvement", False)
-    if forced_improvement:
-        config["run_name"] += "_fi"
-    forced_improvement_generations_threshold = 1 + jnp.log10(config["n_individuals"])
-    diversity_preservation = config.get("diversity_preservation", True)
-    if diversity_preservation:
-        config["run_name"] += "_diversity"
-    if config["n_individuals"] > 200:
-        config["run_name"] += "_large_pop"
+
+    forced_improvement_generations_threshold = 1 + jnp.log10(cfg["n_individuals"])
 
     rnd_key = random.PRNGKey(config["seed"])
 
@@ -81,7 +74,7 @@ def run_gomea(config: Dict) -> None:
                                                              gom_key,
                                                              intermediate_prints=True,
                                                              test_eval_fn=genome_to_test_accuracy,
-                                                             diversity_preservation=diversity_preservation,
+                                                             diversity_preservation=config["diversity_preservation"],
                                                              )
         # ensure genomes are always integers
         offspring_genomes = offspring_genomes.astype(jnp.int32)
@@ -116,7 +109,7 @@ def run_gomea(config: Dict) -> None:
             elite_individual = offspring_genomes[jnp.argmax(fitnesses)]
 
         rnd_key, forced_impro_key = random.split(rnd_key, 2)
-        if forced_improvement:
+        if config["forced_improvement"]:
             # no improvements stretch
             if no_fitness_improvement_generations >= forced_improvement_generations_threshold:
                 print("global forced improvement due to no improvements stretch")
@@ -130,7 +123,7 @@ def run_gomea(config: Dict) -> None:
                     forced_impro_key,
                     True,
                     test_eval_fn=genome_to_test_accuracy,
-                    diversity_preservation=diversity_preservation
+                    diversity_preservation=config["diversity_preservation"]
                 )
             else:
                 unchanged_genomes_ids = jnp.where(jnp.all(genomes == offspring_genomes, axis=1))[0]
@@ -149,9 +142,9 @@ def run_gomea(config: Dict) -> None:
                     forced_impro_key,
                     True,
                     test_eval_fn=genome_to_test_accuracy,
-                    diversity_preservation=diversity_preservation,
-                    reference_population = offspring_genomes,
-                    forced_improvement_ids = unchanged_genomes_ids
+                    diversity_preservation=config["diversity_preservation"],
+                    reference_population=offspring_genomes,
+                    forced_improvement_ids=unchanged_genomes_ids
                 )
                 genomes = offspring_genomes
                 genomes = genomes.at[unchanged_genomes_ids].set(forced_improved_genomes)
@@ -193,10 +186,11 @@ if __name__ == '__main__':
     print(f"Starting the run with {default_backend()} as backend...")
 
     # problem_types = ["boolean", "classification", "regression", "discrete_control", "continuous_control"]
-    problem_types = ["continuous_control"]
+    problem_types = ["regression"]
     args = parse_args(sys.argv[1:])
 
     for problem_type in problem_types:
+        problem_prefix = problem_type if "_" not in problem_type else problem_type.split("_")[1]
 
         config_files = [f"../configs/graph_gp_gomea_{problem_type}.yaml"]
         unpacked_configs = []
@@ -212,7 +206,18 @@ if __name__ == '__main__':
             cfg["problem_type"] = problem_type
             problem_name = cfg['problem']['environment'].lower().split("-")[0] if "control" in problem_type \
                 else cfg['problem']
-            cfg["run_name"] = f"gomea_{cfg['solver']}_{problem_name}_{cfg['fos_mode']}_{cfg['seed']}"
-            print(cfg["run_name"])
+            cfg["run_name"] = f"{problem_prefix}/gomea_{cfg['solver']}_{problem_name}_{cfg['fos_mode']}_{cfg['seed']}"
+            cfg["forced_improvement"] = cfg.get("forced_improvement", False)
+            if cfg["forced_improvement"]:
+                cfg["run_name"] += "_fi"
+            cfg["diversity_preservation"] = cfg.get("diversity_preservation", True)
+            if cfg["diversity_preservation"]:
+                cfg["run_name"] += "_diversity"
+            if cfg["n_individuals"] > 200:
+                cfg["run_name"] += "_large_pop"
+            if Path(f"../results/{cfg['run_name']}.csv").exists():
+                print(f"{cfg['run_name']} already exists!")
+                continue
+            print(f"Running {cfg['run_name']}...")
             run_gomea(cfg)
             print()
