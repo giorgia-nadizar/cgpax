@@ -18,8 +18,6 @@ from cgpax.standard import individual
 def run_ga(config: Dict) -> None:
     if "n_evaluations" not in config:
         config["n_evaluations"] = config["n_generations"] * config["n_individuals"]
-    if config["n_individuals"] > 200:
-        config["run_name"] += "_large_pop"
 
     rnd_key = random.PRNGKey(config["seed"])
 
@@ -146,9 +144,11 @@ if __name__ == '__main__':
 
     # problem_types = ["boolean", "classification", "regression", "discrete_control", "continuous_control"]
     problem_types = ["continuous_control"]
+
     args = parse_args(sys.argv[1:])
 
     for problem_type in problem_types:
+        problem_prefix = problem_type if "_" not in problem_type else problem_type.split("_")[1]
 
         config_files = [f"../configs/graph_gp_{problem_type}.yaml"]
         unpacked_configs = []
@@ -164,7 +164,12 @@ if __name__ == '__main__':
             cfg["problem_type"] = problem_type
             problem_name = cfg['problem']['environment'].lower().split("-")[0] if "control" in problem_type \
                 else cfg['problem']
-            cfg["run_name"] = f"ga_{cfg['solver']}_{problem_name}_{cfg['seed']}"
-            print(cfg["run_name"])
+            cfg["run_name"] = f"{problem_prefix}/ga_{cfg['solver']}_{problem_name}_{cfg['seed']}"
+            if cfg["n_individuals"] > 200:
+                cfg["run_name"] += "_large_pop"
+            if Path(f"../results/{cfg['run_name']}.csv").exists():
+                print(f"{cfg['run_name']} already exists!")
+                continue
+            print(f"Running {cfg['run_name']}...")
             run_ga(cfg)
             print()
