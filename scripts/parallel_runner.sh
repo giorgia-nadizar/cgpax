@@ -9,7 +9,7 @@ byobu send-keys -t $SESSION:base "echo 'GPAX run session started'" C-m
 FOSS=("U" "RT" "LT" "LT1")
 
 # Loop over seeds
-for SEED in {0..4}; do
+for SEED in {5..9}; do
   # Loop over FOS modes
   for FOS in "${FOSS[@]}"; do
     WIN_NAME="seed_${SEED}_${FOS}"
@@ -27,7 +27,7 @@ for SEED in {0..4}; do
 done
 
 # Loop over seeds
-for SEED in {0..4}; do
+for SEED in {5..9}; do
   WIN_NAME="seed_$SEED"
 
   # Create a new window
