@@ -143,7 +143,7 @@ if __name__ == '__main__':
     print(f"Starting the run with {default_backend()} as backend...")
 
     # problem_types = ["boolean", "classification", "regression", "discrete_control", "continuous_control"]
-    problem_types = ["continuous_control"]
+    problem_types = ["continuous_control", "regression"]
 
     args = parse_args(sys.argv[1:])
 
