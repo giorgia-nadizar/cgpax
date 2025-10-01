@@ -30,6 +30,72 @@ def nguyen_9_12():
     combine_regression_functions(x, [nguyen_9, nguyen_12], file_path)
 
 
+def feynman_13(q: jnp.ndarray, ef: jnp.ndarray, b: jnp.ndarray, v: jnp.ndarray, theta: jnp.ndarray) -> jnp.ndarray:
+    return q * (ef + b * v * jnp.sin(theta))
+
+
+def feynman_61(q: jnp.ndarray, ef: jnp.ndarray, m: jnp.ndarray, omega_0: jnp.ndarray,
+               omega: jnp.ndarray) -> jnp.ndarray:
+    return q * ef / (m * (jnp.power(omega_0, 2) - jnp.power(omega, 2)))
+
+
+def feynman_42(n: jnp.ndarray, kb: jnp.ndarray, t: jnp.ndarray, v: jnp.ndarray) -> jnp.ndarray:
+    return n * kb * t / v
+
+
+def feynman_43(n0: jnp.ndarray, m: jnp.ndarray, g: jnp.ndarray, x: jnp.ndarray, kb: jnp.ndarray,
+               t: jnp.ndarray) -> jnp.ndarray:
+    return n0 * jnp.exp(-m * g * x / (kb * t))
+
+
+def feynman_48(n: jnp.ndarray, kb: jnp.ndarray, t: jnp.ndarray, v1: jnp.ndarray, v2: jnp.ndarray) -> jnp.ndarray:
+    return n * kb * t * jnp.log(v2 / v1)
+
+
+def feynman_13_61():
+    file_path = "feynman_13_61"
+    min_vals = jnp.array([1., 1., 1., 1., 1., 1., 3., 1.])
+    max_vals = jnp.array([3., 3., 5., 5., 5., 3., 5., 2.])
+    key = jax.random.PRNGKey(0)
+    X = jax.random.uniform(key, shape=(500, 8)) * (max_vals - min_vals) + min_vals
+    q = X[:, 0]
+    ef = X[:, 1]
+    b = X[:, 2]
+    v = X[:, 3]
+    theta = X[:, 4]
+    m = X[:, 5]
+    omega_0 = X[:, 6]
+    omega = X[:, 7]
+    y0 = feynman_13(q, ef, b, v, theta)
+    y1 = feynman_61(q, ef, m, omega_0, omega)
+    y = jnp.hstack([k.reshape(-1, 1) for k in [y0, y1]])
+    jnp.save(f"{file_path}_x.npy", X)
+    jnp.save(f"{file_path}_y.npy", y)
+
+
+def feynman_42_43_48():
+    file_path = "feynman_42_43_48"
+    key = jax.random.PRNGKey(0)
+    X = jax.random.uniform(key, shape=(500, 10), minval=1., maxval=5.)
+    n = X[:, 0]
+    t = X[:, 1]
+    v = X[:, 2]
+    kb = X[:, 3]
+    n0 = X[:, 4]
+    m = X[:, 5]
+    x = X[:, 6]
+    g = X[:, 7]
+    v1 = X[:, 8]
+    v2 = X[:, 9]
+
+    y0 = feynman_42(n, kb, t, v)
+    y1 = feynman_43(n0, m, g, x, kb, t)
+    y2 = feynman_48(n, kb, t, v1, v2)
+    y = jnp.hstack([k.reshape(-1, 1) for k in [y0, y1, y2]])
+    jnp.save(f"{file_path}_x.npy", X)
+    jnp.save(f"{file_path}_y.npy", y)
+
+
 def two_bits_input() -> jnp.ndarray:
     inputs_list = []
     for a in [0, 1]:
@@ -96,4 +162,4 @@ def two_bit_multiplier():
 
 if __name__ == '__main__':
     # two_bit_multiplier()
-    nguyen_9_12()
+    feynman_42_43_48()
