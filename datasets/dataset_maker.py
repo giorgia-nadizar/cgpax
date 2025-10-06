@@ -3,6 +3,18 @@ import jax.numpy as jnp
 from typing import Callable, List
 
 
+def nguyen_5(x: jnp.ndarray) -> jnp.ndarray:
+    return jnp.sin(x ** 2) * jnp.cos(x) - jnp.ones_like(x)
+
+
+def nguyen_6(x: jnp.ndarray) -> jnp.ndarray:
+    return jnp.sin(x) + jnp.sin(x + x ** 2)
+
+
+def nguyen_7(x: jnp.ndarray) -> jnp.ndarray:
+    return jnp.log(jnp.abs(x + 1)) + jnp.log(jnp.abs(x ** 2 + 1))
+
+
 def nguyen_9(x: jnp.ndarray) -> jnp.ndarray:
     return jnp.sin(x[:, 0]) + jnp.sin(x[:, 1] ** 2)
 
@@ -145,6 +157,21 @@ def feynman_13_61_62_70_77_100():
     jnp.save(f"{file_path}_y.npy", y)
 
 
+def composite_function():
+    file_path = "composite_function"
+    min_vals = jnp.ones(5, dtype=float)
+    max_vals = jnp.array([3., 3., 5., 5., 3.])
+    key = jax.random.PRNGKey(0)
+    X = jax.random.uniform(key, shape=(500, 5)) * (max_vals - min_vals) + min_vals
+    y_inner = feynman_13(X[:, 0], X[:, 1], X[:, 2], X[:, 3], X[:, 4])
+    y0 = nguyen_5(y_inner)
+    y1 = nguyen_6(y_inner)
+    y2 = nguyen_7(y_inner)
+    y = jnp.hstack([k.reshape(-1, 1) for k in [y0, y1, y2]])
+    jnp.save(f"{file_path}_x.npy", X)
+    jnp.save(f"{file_path}_y.npy", y)
+
+
 def two_bits_input() -> jnp.ndarray:
     inputs_list = []
     for a in [0, 1]:
@@ -211,4 +238,5 @@ def two_bit_multiplier():
 
 if __name__ == '__main__':
     # two_bit_multiplier()
-    feynman_13_61_62_70_77_100()
+    # feynman_13_61_62_70_77_100()
+    composite_function()
