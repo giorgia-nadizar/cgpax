@@ -81,6 +81,26 @@ def feynman_100(rho: jnp.ndarray, q: jnp.ndarray, a: jnp.ndarray, m: jnp.ndarray
     return -rho * q * a / m
 
 
+def feynman_43_():
+    file_path = "feynman_43"
+    key = jax.random.PRNGKey(0)
+    X = jax.random.uniform(key, shape=(500, 6), minval=1., maxval=5.)
+    y = feynman_43(X[:, 0], X[:, 1], X[:, 2], X[:, 3], X[:, 4], X[:, 5])
+    jnp.save(f"{file_path}_x.npy", X)
+    jnp.save(f"{file_path}_y.npy", y)
+
+
+def feynman_13_():
+    file_path = "feynman_13"
+    min_vals = jnp.ones(5, dtype=jnp.float32)
+    max_vals = jnp.array([3., 3., 5., 5., 5.])
+    key = jax.random.PRNGKey(0)
+    X = jax.random.uniform(key, shape=(500, 5)) * (max_vals - min_vals) + min_vals
+    y = feynman_13(X[:, 0], X[:, 1], X[:, 2], X[:, 3], X[:, 4])
+    jnp.save(f"{file_path}_x.npy", X)
+    jnp.save(f"{file_path}_y.npy", y)
+
+
 def feynman_13_61():
     file_path = "feynman_13_61"
     min_vals = jnp.array([1., 1., 1., 1., 1., 1., 3., 1.])
@@ -239,4 +259,6 @@ def two_bit_multiplier():
 if __name__ == '__main__':
     # two_bit_multiplier()
     # feynman_13_61_62_70_77_100()
-    composite_function()
+    # composite_function()
+    # print()
+    feynman_13_()
