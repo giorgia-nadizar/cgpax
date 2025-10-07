@@ -9,7 +9,11 @@ from typing import List, Callable, Tuple, Dict, Union, Set, Any
 import telegram
 from brax import envs
 from brax.envs import ant
-from brax.envs.wrappers import EpisodeWrapper
+try:
+    from brax.envs.wrappers.episode import EpisodeWrapper
+except Exception:
+    # older Brax versions may export it at package level
+    from brax.envs.wrappers import EpisodeWrapper
 from gymnasium import Env
 from sklearn import datasets
 from wandb.apis.public import Run
