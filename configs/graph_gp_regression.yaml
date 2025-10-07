@@ -22,8 +22,8 @@ nested0:
     p_mut_inputs: 0.1
     p_mut_outputs: 0.3
     solver: cgp
-    n_extra_registers: 10
-  - n_rows: 35
+  - n_extra_registers: 10
+    n_rows: 35
     p_mut_lhs: 0.3
     p_mut_rhs: 0.1
     solver: lgp
@@ -35,5 +35,5 @@ nested0:
 #  maximize: true
 n_evaluations: 500_000
 #problem: nguyen_9_12
-problem: composite_function
+problem: [feynman_13, feynman_43]
 early_stop: false
