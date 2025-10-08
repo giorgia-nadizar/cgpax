@@ -15,16 +15,16 @@ seed: [ 0,1,2,3,4 ]
 forced_improvement: True
 #store_fitness_details_list: [ healthy, ctrl, forward ]
 diversity_preservation: false
-#n_nodes: 50
-#p_mut_inputs: 0.1
-#p_mut_outputs: 0.3
-#solver: cgp
+n_nodes: 50
+p_mut_inputs: 0.1
+p_mut_outputs: 0.3
+solver: cgp
 #crossover: true
-n_extra_registers: 10
-n_rows: 35
-p_mut_lhs: 0.3
-p_mut_rhs: 0.1
-solver: lgp
+#n_extra_registers: 10
+#n_rows: 35
+#p_mut_lhs: 0.3
+#p_mut_rhs: 0.1
+#solver: lgp
 #problem:
 #  environment: inverted_double_pendulum
 #  episode_length: 1000

@@ -17,6 +17,7 @@ selection:
   type: tournament
 survival: truncation
 
+<<<<<<< Updated upstream
 nested0:
   - n_nodes: 50
     p_mut_inputs: 0.1
@@ -27,6 +28,18 @@ nested0:
     p_mut_lhs: 0.3
     p_mut_rhs: 0.1
     solver: lgp
+=======
+#nested0:
+n_nodes: 50
+p_mut_inputs: 0.1
+p_mut_outputs: 0.3
+solver: cgp
+#n_extra_registers: 10
+#n_rows: 35
+#p_mut_lhs: 0.3
+#p_mut_rhs: 0.1
+#solver: lgp
+>>>>>>> Stashed changes
 
 #problem:
 #  environment: inverted_double_pendulum
@@ -35,5 +48,9 @@ nested0:
 #  maximize: true
 n_evaluations: 500_000
 #problem: nguyen_9_12
+<<<<<<< Updated upstream
 problem: [feynman_13, feynman_43]
+=======
+problem: [ nguyen_9_dense,nguyen_10_dense,nguyen_12_dense,nguyen_9_12_dense ]
+>>>>>>> Stashed changes
 early_stop: false
