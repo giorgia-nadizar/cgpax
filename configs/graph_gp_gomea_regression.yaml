@@ -13,7 +13,6 @@ seed: [ 0,1,2,3,4 ]
 train_size: 0.8
 #store_fitness_details_list: [ healthy, ctrl, forward ]
 fos_mode: [ U,RT,LT,N1,N2 ]
-<<<<<<< Updated upstream
 nested0:
   - n_nodes: 50
     p_mut_inputs: 0.1
@@ -25,19 +24,6 @@ nested0:
     p_mut_lhs: 0.3
     p_mut_rhs: 0.1
     solver: lgp
-=======
-#nested0:
-n_nodes: 50
-p_mut_inputs: 0.1
-p_mut_outputs: 0.3
-solver: cgp
-#  - crossover: true
-#n_extra_registers: 10
-#n_rows: 35
-#p_mut_lhs: 0.3
-#p_mut_rhs: 0.1
-#solver: lgp
->>>>>>> Stashed changes
 
 #problem:
 #  environment: inverted_double_pendulum
