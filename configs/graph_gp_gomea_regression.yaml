@@ -11,7 +11,6 @@ use_input_constants: true
 saving_interval: 100
 seed: [ 0,1,2,3,4 ]
 train_size: 0.8
-#store_fitness_details_list: [ healthy, ctrl, forward ]
 fos_mode: [ U,RT,LT,N1,N2 ]
 nested0:
   - n_nodes: 50
@@ -24,15 +23,8 @@ nested0:
     p_mut_lhs: 0.3
     p_mut_rhs: 0.1
     solver: lgp
-
-#problem:
-#  environment: inverted_double_pendulum
-#  episode_length: 1000
-#  incremental_steps: 1
-#  maximize: true
 n_evaluations: 500_000
-#problem: nguyen_9_12
-problem: [feynman_13, feynman_43]
+problem: [feynman_13_61, feynman_42_43_48, feynman_13_61_62_70_77_100]
 early_stop: false
 forced_improvement: True
 diversity_preservation: false
